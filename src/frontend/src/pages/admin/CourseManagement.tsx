@@ -49,7 +49,7 @@ interface CurriculumEntry {
 interface ExtendedCourse extends CourseRecord {
   id: string;
   level: string;
-  prerequisites: string;
+  prerequisitesText: string;
   type: "compulsory" | "elective";
   approvalStatus: "proposed" | "approved";
   available: boolean;
@@ -95,7 +95,7 @@ const EMPTY_FORM: Partial<ExtendedCourse> = {
   semester: "2024/2025 First",
   lecturerId: "",
   level: "100",
-  prerequisites: "",
+  prerequisitesText: "",
   type: "compulsory",
   approvalStatus: "approved",
   available: true,
@@ -107,7 +107,7 @@ export function CourseManagement() {
       ...c,
       id: c.code,
       level: c.semester.includes("2021") ? "100" : "200",
-      prerequisites: "",
+      prerequisitesText: "",
       type: "compulsory" as const,
       approvalStatus: "approved" as const,
       available: true,
@@ -200,7 +200,7 @@ export function CourseManagement() {
       lecturerId: form.lecturerId || "",
       id: form.code.trim().toUpperCase(),
       level: form.level || "100",
-      prerequisites: form.prerequisites || "",
+      prerequisitesText: form.prerequisitesText || "",
       type: form.type || "compulsory",
       approvalStatus: form.approvalStatus || "approved",
       available: form.available !== false,
@@ -503,9 +503,9 @@ export function CourseManagement() {
                     <Input
                       className="mt-1"
                       placeholder="e.g. CSC301, MTH201"
-                      value={form.prerequisites ?? ""}
+                      value={form.prerequisitesText ?? ""}
                       onChange={(e) =>
-                        setForm({ ...form, prerequisites: e.target.value })
+                        setForm({ ...form, prerequisitesText: e.target.value })
                       }
                       data-ocid="course-mgmt.prereq_input"
                     />
@@ -666,9 +666,9 @@ export function CourseManagement() {
                             </td>
                             <td className="px-4 py-3 text-foreground max-w-[180px]">
                               <p className="truncate">{c.title}</p>
-                              {c.prerequisites && (
+                              {c.prerequisitesText && (
                                 <p className="text-xs text-muted-foreground">
-                                  Pre: {c.prerequisites}
+                                  Pre: {c.prerequisitesText}
                                 </p>
                               )}
                             </td>

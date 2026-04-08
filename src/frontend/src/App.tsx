@@ -246,6 +246,7 @@ export default function App() {
     | "result-publication"
     | "academic-status"
     | "graduation-clearance"
+    | "graduation-tracker"
     | "analytics-v2"
     | "data-import"
     | "ai-dashboard"
@@ -361,6 +362,7 @@ export default function App() {
                 | "announcements-view"
                 | "communication-center"
                 | "my-certificates"
+                | "graduation-tracker"
             }
             userEmail={userProfile?.email ?? ""}
             userName={userName}
@@ -472,6 +474,7 @@ export default function App() {
                 | "announcement-view"
                 | "curriculum-management"
                 | "certificate-courses"
+                | "graduation-tracker"
             }
           />
         );

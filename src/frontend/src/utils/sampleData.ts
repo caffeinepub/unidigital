@@ -1,3 +1,5 @@
+import { ALL_FUEK_COURSES } from "./fuekCourseData";
+
 export interface StudentRecord {
   matricNumber: string;
   name: string;
@@ -15,6 +17,36 @@ export interface CourseRecord {
   department: string;
   semester: string;
   lecturerId: string;
+  // Extended fields (optional, added with FUEK course integration)
+  type?: "compulsory" | "elective";
+  level?: number | string;
+  prerequisites?: string[];
+  isGST?: boolean;
+  programmeType?: string;
+  subjectArea?: string;
+  isAvailable?: boolean;
+  description?: string;
+}
+
+/**
+ * LocalCourse — richer course format used in the course catalog,
+ * course registration, and admin course management.
+ */
+export interface LocalCourse {
+  id: string;
+  code: string;
+  title: string;
+  creditUnits: number;
+  type: "compulsory" | "elective";
+  department: string;
+  level: number | string;
+  semester: string;
+  prerequisites?: string[];
+  isGST?: boolean;
+  programmeType?: string;
+  subjectArea?: string;
+  isAvailable?: boolean;
+  description?: string;
 }
 
 export interface StaffRecord {
@@ -192,6 +224,7 @@ export function initSampleData() {
     initV4Data();
     initV5Data();
     initV6Data();
+    initFuekCourses();
     return;
   }
 
@@ -551,6 +584,7 @@ export function initSampleData() {
   initV4Data();
   initV5Data();
   initV6Data();
+  initFuekCourses();
 }
 
 function initV4Data() {
@@ -2641,4 +2675,45 @@ function initV19Data() {
 
 export function initV19() {
   initV19Data();
+}
+
+// ========================
+// FUEK Course Catalog — full programme dataset
+// ========================
+
+export function getLocalCatalogCourses(): LocalCourse[] {
+  return JSON.parse(localStorage.getItem("unidigital_catalog_courses") || "[]");
+}
+
+export function saveLocalCatalogCourses(data: LocalCourse[]) {
+  localStorage.setItem("unidigital_catalog_courses", JSON.stringify(data));
+}
+
+/**
+ * Seeds the full FUEK course catalog into localStorage if fewer than 50
+ * entries exist. This ensures course registration and catalog pages always
+ * have real course data available.
+ */
+export function initFuekCourses() {
+  const existing = getLocalCatalogCourses();
+  if (existing.length >= 50) return;
+
+  const mapped: LocalCourse[] = ALL_FUEK_COURSES.map((c) => ({
+    id: c.id,
+    code: c.code,
+    title: c.title,
+    creditUnits: c.creditUnits,
+    type: c.type,
+    department: c.department,
+    level: c.level,
+    semester: c.semester,
+    prerequisites: c.prerequisites,
+    isGST: c.isGST,
+    programmeType: c.programmeType,
+    subjectArea: c.subjectArea,
+    isAvailable: true,
+    description: `${c.programmeType} ${String(c.level) === "Batch" ? "Certificate Batch" : `Level ${String(c.level)}`} — ${c.type === "compulsory" ? "Compulsory" : "Elective"} (${c.creditUnits} units)`,
+  }));
+
+  saveLocalCatalogCourses(mapped);
 }

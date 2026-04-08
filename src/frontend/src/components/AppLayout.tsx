@@ -309,6 +309,11 @@ const navByRole: Record<string, NavItem[]> = {
       key: "ai-bulk-registration",
     },
     {
+      label: "Bulk Course Reg.",
+      icon: <Database size={18} />,
+      key: "bulk-course-registration",
+    },
+    {
       label: "Reg. Doc Archive",
       icon: <Database size={18} />,
       key: "registration-doc-archive",

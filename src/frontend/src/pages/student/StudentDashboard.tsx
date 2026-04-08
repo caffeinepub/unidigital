@@ -41,6 +41,7 @@ import { FeeClearance } from "./FeeClearance";
 import { FeePayment } from "./FeePayment";
 import { GPASummary } from "./GPASummary";
 import { GraduationStatus } from "./GraduationStatus";
+import { GraduationTracker } from "./GraduationTracker";
 import { HostelApplication } from "./HostelApplication";
 import { MyCertificates } from "./MyCertificates";
 import { PaymentHistory } from "./PaymentHistory";
@@ -97,7 +98,8 @@ type Page =
   | "course-catalog"
   | "announcements-view"
   | "communication-center"
-  | "my-certificates";
+  | "my-certificates"
+  | "graduation-tracker";
 
 interface StudentDashboardProps {
   activePage: Page;
@@ -584,7 +586,7 @@ export function StudentDashboard({
   if (activePage === "registration")
     return (
       <GatedRoute pageKey="registration">
-        <CourseRegistration studentMatric={studentId} />
+        <CourseRegistration studentMatric={studentId} userEmail={userEmail} />
       </GatedRoute>
     );
 
@@ -665,6 +667,8 @@ export function StudentDashboard({
   if (activePage === "announcements-view")
     return <AnnouncementView role={"student" as never} />;
   if (activePage === "communication-center") return <CommunicationCenter />;
+  if (activePage === "graduation-tracker")
+    return <GraduationTracker userEmail={userEmail} userRole="student" />;
   if (activePage === "my-certificates")
     return (
       <GatedRoute pageKey="my-certificates">

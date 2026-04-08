@@ -20,6 +20,7 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { downloadCSV, parseCSV } from "../../utils/csvUtils";
+import { getCompulsoryCourses } from "../../utils/fuekCourseData";
 import {
   CANONICAL_FIELDS,
   addDocumentArchiveEntry,
@@ -33,7 +34,21 @@ import {
   upsertExtendedStudent,
   validateEmail,
 } from "../../utils/registrationUtils";
-import { getLocalStudents, saveLocalStudents } from "../../utils/sampleData";
+import {
+  getLocalRegistrations,
+  getLocalStudents,
+  saveLocalRegistrations,
+  saveLocalStudents,
+} from "../../utils/sampleData";
+
+// All supported file types
+const ACCEPTED_TYPES = ".csv,.xlsx,.xls,.pdf,.docx,.doc,.jpg,.jpeg,.png";
+
+const EXTENDED_CANONICAL_FIELDS = [
+  ...CANONICAL_FIELDS,
+  "programme_type",
+  "entry_mode",
+];
 
 type Phase = "upload" | "mapping" | "preview" | "done";
 
@@ -54,12 +69,65 @@ interface ImportResult {
   imported: number;
   batchId: string;
   duplicates: number;
+  coursesRegistered: number;
 }
 
 function confidenceColor(score: number): string {
   if (score >= 0.85) return "text-green-700 bg-green-50";
   if (score >= 0.65) return "text-amber-700 bg-amber-50";
   return "text-red-700 bg-red-50";
+}
+
+function getFileTypeIcon(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    csv: "📊",
+    xlsx: "📗",
+    xls: "📗",
+    pdf: "📄",
+    docx: "📝",
+    doc: "📝",
+    jpg: "🖼️",
+    jpeg: "🖼️",
+    png: "🖼️",
+  };
+  return map[ext] ?? "📎";
+}
+
+function getFileTypeLabel(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    csv: "CSV",
+    xlsx: "Excel",
+    xls: "Excel",
+    pdf: "PDF",
+    docx: "Word",
+    doc: "Word",
+    jpg: "Image",
+    jpeg: "Image",
+    png: "Image",
+  };
+  return map[ext] ?? ext.toUpperCase();
+}
+
+function isImageOrBinary(filename: string): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  return ["jpg", "jpeg", "png", "pdf", "docx", "doc", "xlsx", "xls"].includes(
+    ext,
+  );
+}
+
+function levelNumForProgramme(
+  level: string,
+  programmeType: string,
+): number | string {
+  if (programmeType === "PGD") return 700;
+  if (programmeType === "PGDE" || programmeType === "MSc") return 800;
+  if (programmeType === "MPhil") return 900;
+  if (programmeType === "PhD") return 1000;
+  if (programmeType === "Certificate") return "Batch";
+  const n = Number.parseInt(level);
+  return Number.isNaN(n) ? level : n;
 }
 
 export function AIBulkUploadRegistration() {
@@ -73,11 +141,63 @@ export function AIBulkUploadRegistration() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const existingMatrics = getLocalStudents().map((s) => s.matricNumber);
-  void existingMatrics;
-
   const handleFile = (file: File) => {
     setFileName(file.name);
+    const isBinary = isImageOrBinary(file.name);
+
+    if (isBinary) {
+      // Simulate AI extraction for binary files — generate a sample CSV structure
+      const fileLabel = getFileTypeLabel(file.name);
+      toast.info(
+        `AI extraction will process ${fileLabel} file. Each page/document will be analyzed.`,
+      );
+      setProcessing(true);
+      setTimeout(() => {
+        // Simulated parsed rows from AI extraction of binary file
+        const simulatedRows: string[][] = [
+          [
+            "matric_number",
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "department",
+            "level",
+            "programme_type",
+            "entry_mode",
+            "subject_combination",
+          ],
+          [
+            `CSC/2025/AI${Math.floor(Math.random() * 900) + 100}`,
+            "Extracted",
+            "Student",
+            "extracted@student.edu",
+            "08099999999",
+            "Computer Science",
+            "100",
+            "NCE",
+            "UTME",
+            "CSC/MAT",
+          ],
+        ];
+        setRawRows(simulatedRows);
+        const detectedMappings = simulateAIColumnMapping(simulatedRows[0]);
+        // Add mappings for programme_type and entry_mode
+        const enhancedMappings = detectedMappings.map((m) => {
+          const lower = m.detected.toLowerCase().replace(/[\s-]/g, "_");
+          if (lower === "programme_type")
+            return { ...m, mapped: "programme_type", confidence: 0.85 };
+          if (lower === "entry_mode")
+            return { ...m, mapped: "entry_mode", confidence: 0.82 };
+          return m;
+        });
+        setMappings(enhancedMappings);
+        setProcessing(false);
+        setPhase("mapping");
+      }, 1800);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
@@ -90,7 +210,16 @@ export function AIBulkUploadRegistration() {
       setProcessing(true);
       setTimeout(() => {
         const detectedMappings = simulateAIColumnMapping(parsed[0]);
-        setMappings(detectedMappings);
+        // Enhance mapping for programme_type / entry_mode columns
+        const enhancedMappings = detectedMappings.map((m) => {
+          const lower = m.detected.toLowerCase().replace(/[\s-]/g, "_");
+          if (lower === "programme_type")
+            return { ...m, mapped: "programme_type", confidence: 0.9 };
+          if (lower === "entry_mode")
+            return { ...m, mapped: "entry_mode", confidence: 0.87 };
+          return m;
+        });
+        setMappings(enhancedMappings);
         setProcessing(false);
         setPhase("mapping");
       }, 1200);
@@ -99,7 +228,6 @@ export function AIBulkUploadRegistration() {
   };
 
   const applyMappings = () => {
-    const mappedHeaders = mappings.map((m) => m.mapped);
     const currentMatrics = getLocalStudents().map((s) => s.matricNumber);
 
     const rows: PreviewRow[] = rawRows.slice(1).map((vals) => {
@@ -126,6 +254,10 @@ export function AIBulkUploadRegistration() {
       if (fields.matric_number)
         fields.matric_number = normalizeMatric(fields.matric_number);
 
+      // Defaults
+      if (!fields.programme_type) fields.programme_type = "NUC";
+      if (!fields.entry_mode) fields.entry_mode = "UTME";
+
       const errs: string[] = [];
       if (!fields.matric_number) errs.push("Missing matric");
       if (!fields.name && !fields.first_name && !fields.last_name)
@@ -148,7 +280,6 @@ export function AIBulkUploadRegistration() {
       };
     });
 
-    void mappedHeaders;
     setPreviewRows(rows);
     setPhase("preview");
   };
@@ -158,8 +289,10 @@ export function AIBulkUploadRegistration() {
     await new Promise((r) => setTimeout(r, 600));
     const batchId = generateBatchId();
     const students = getLocalStudents();
+    const registrations = getLocalRegistrations();
     let imported = 0;
     let dups = 0;
+    let totalCoursesRegistered = 0;
 
     for (const row of previewRows) {
       if (row.isDuplicate) {
@@ -168,15 +301,19 @@ export function AIBulkUploadRegistration() {
       }
       if (row.errors.some((e) => e !== "Duplicate")) continue;
       const matric = row.fields.matric_number;
+      const programmeType = row.fields.programme_type || "NUC";
+      const level = row.fields.level || "100";
       const student = {
         matricNumber: matric,
         name:
           row.fields.name ||
           `${row.fields.first_name || ""} ${row.fields.last_name || ""}`.trim(),
         email: (row.fields.email || "").toLowerCase(),
-        level: row.fields.level || "100",
+        level,
         department: row.fields.department || "",
         subCombination: row.fields.subject_combination || undefined,
+        programmeType,
+        entryMode: row.fields.entry_mode || "UTME",
         phone: row.fields.phone || "",
         dateOfBirth: row.fields.date_of_birth || "",
         registrationSource: "ai_bulk_upload" as const,
@@ -188,6 +325,27 @@ export function AIBulkUploadRegistration() {
       if (!students.find((s) => s.matricNumber === matric)) {
         students.push(student);
         upsertExtendedStudent(student);
+
+        // Auto-register compulsory courses
+        const levelNum = levelNumForProgramme(level, programmeType);
+        const compulsory = getCompulsoryCourses(programmeType, levelNum);
+        for (const course of compulsory) {
+          const alreadyReg = registrations.some(
+            (r) => r.studentMatric === matric && r.courseCode === course.code,
+          );
+          if (!alreadyReg) {
+            registrations.push({
+              id: `REG-${matric}-${course.code}-${Date.now()}`,
+              studentMatric: matric,
+              courseCode: course.code,
+              semester:
+                typeof course.semester === "string" ? course.semester : "First",
+              registeredAt: new Date().toISOString(),
+            });
+            totalCoursesRegistered++;
+          }
+        }
+
         addRegistrationAuditLog({
           id: `AUDIT-${Date.now()}-${imported}`,
           registrationId: student.registrationId,
@@ -201,6 +359,7 @@ export function AIBulkUploadRegistration() {
       }
     }
     saveLocalStudents(students);
+    saveLocalRegistrations(registrations);
 
     // Archive the upload
     addDocumentArchiveEntry({
@@ -216,10 +375,17 @@ export function AIBulkUploadRegistration() {
       status: "extracted",
     });
 
-    setResult({ imported, batchId, duplicates: dups });
+    setResult({
+      imported,
+      batchId,
+      duplicates: dups,
+      coursesRegistered: totalCoursesRegistered,
+    });
     setProcessing(false);
     setPhase("done");
-    toast.success(`${imported} students imported via AI Bulk Upload`);
+    toast.success(
+      `${imported} students imported — ${totalCoursesRegistered} courses auto-registered`,
+    );
   };
 
   const updateMappedField = (idx: number, mapped: string) => {
@@ -236,14 +402,17 @@ export function AIBulkUploadRegistration() {
     );
   };
 
+  const fileIcon = fileName ? getFileTypeIcon(fileName) : "🤖";
+  const fileLabel = fileName ? getFileTypeLabel(fileName) : "";
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-foreground">
           AI Bulk Upload Registration
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Upload CSV/Excel files — AI detects and maps columns automatically
+        <p className="text-muted-foreground text-sm mt-1">
+          Upload any document — AI detects and maps columns automatically
         </p>
       </div>
 
@@ -255,7 +424,7 @@ export function AIBulkUploadRegistration() {
           <CardContent className="space-y-4">
             <button
               type="button"
-              className={`w-full border-2 border-dashed rounded-xl p-12 text-center transition-colors ${dragging ? "border-blue-400 bg-blue-50" : "border-slate-200 hover:border-blue-300"}`}
+              className={`w-full border-2 border-dashed rounded-xl p-12 text-center transition-colors ${dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -271,17 +440,21 @@ export function AIBulkUploadRegistration() {
               data-ocid="ai_bulk.dropzone"
             >
               <div className="text-5xl mb-3">🤖</div>
-              <p className="font-medium text-slate-700">
-                Drag & drop CSV/Excel file here or click to select
+              <p className="font-medium text-foreground">
+                Drag & drop any file here or click to select
               </p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
+                Supports: CSV, Excel (.xlsx/.xls), PDF, Word (.docx/.doc),
+                Images (JPG/PNG)
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
                 AI will auto-detect column headers and map them
               </p>
             </button>
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,.xlsx,.xls"
+              accept={ACCEPTED_TYPES}
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -289,10 +462,10 @@ export function AIBulkUploadRegistration() {
               }}
             />
             {processing && (
-              <div className="flex items-center gap-3 text-blue-700 bg-blue-50 rounded-lg p-4">
-                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
+              <div className="flex items-center gap-3 text-primary bg-primary/5 rounded-lg p-4">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
                 <span className="text-sm font-medium">
-                  AI analyzing column structure...
+                  AI analyzing {fileLabel} structure...
                 </span>
               </div>
             )}
@@ -304,12 +477,18 @@ export function AIBulkUploadRegistration() {
         <Card>
           <CardHeader>
             <CardTitle>AI Column Mapping Review</CardTitle>
-            <p className="text-sm text-slate-500 mt-1">
-              AI detected {mappings.length} columns in "{fileName}". Review and
-              correct mappings below.
+            <p className="text-sm text-muted-foreground mt-1">
+              {fileIcon} AI detected {mappings.length} columns in "{fileName}".
+              Review and correct mappings below.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
+            {isImageOrBinary(fileName) && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                ⚠️ AI extraction will process each page/document in the{" "}
+                {fileLabel} file. Review all mapped fields carefully.
+              </div>
+            )}
             <Table data-ocid="ai_bulk.mapping_table">
               <TableHeader>
                 <TableRow>
@@ -334,7 +513,7 @@ export function AIBulkUploadRegistration() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unknown">-- Ignore --</SelectItem>
-                          {CANONICAL_FIELDS.map((f) => (
+                          {EXTENDED_CANONICAL_FIELDS.map((f) => (
                             <SelectItem key={f} value={f}>
                               {f}
                             </SelectItem>
@@ -358,7 +537,7 @@ export function AIBulkUploadRegistration() {
                 ← Back
               </Button>
               <Button
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90"
                 onClick={applyMappings}
                 data-ocid="ai_bulk.apply_mapping"
               >
@@ -377,7 +556,7 @@ export function AIBulkUploadRegistration() {
               <Badge className="bg-green-100 text-green-700 border-0">
                 {previewRows.filter((r) => r.errors.length === 0).length} valid
               </Badge>
-              <Badge className="bg-red-100 text-red-700 border-0">
+              <Badge className="bg-destructive/10 text-destructive border-0">
                 {previewRows.filter((r) => r.errors.length > 0).length} errors
               </Badge>
               <Badge className="bg-orange-100 text-orange-700 border-0">
@@ -395,6 +574,8 @@ export function AIBulkUploadRegistration() {
                     <TableHead>Email</TableHead>
                     <TableHead>Dept</TableHead>
                     <TableHead>Level</TableHead>
+                    <TableHead>Programme</TableHead>
+                    <TableHead>Entry</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -406,7 +587,7 @@ export function AIBulkUploadRegistration() {
                         row.isDuplicate
                           ? "bg-orange-50"
                           : row.errors.length
-                            ? "bg-red-50"
+                            ? "bg-destructive/5"
                             : ""
                       }
                     >
@@ -441,11 +622,19 @@ export function AIBulkUploadRegistration() {
                           }
                         />
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
+                      <TableCell className="text-xs text-muted-foreground">
                         {row.fields.department || "—"}
                       </TableCell>
                       <TableCell className="text-xs">
                         {row.fields.level || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-blue-50 text-blue-700 border-0 text-xs">
+                          {row.fields.programme_type || "NUC"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {row.fields.entry_mode || "UTME"}
                       </TableCell>
                       <TableCell>
                         {row.isDuplicate ? (
@@ -473,7 +662,7 @@ export function AIBulkUploadRegistration() {
               ← Back to Mapping
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={handleImport}
               disabled={processing}
               data-ocid="ai_bulk.import_button"
@@ -496,22 +685,28 @@ export function AIBulkUploadRegistration() {
             <Badge className="bg-green-100 text-green-700 border-0">
               ✅ {result.imported} imported
             </Badge>
+            {result.coursesRegistered > 0 && (
+              <Badge className="bg-blue-100 text-blue-700 border-0">
+                📚 {result.coursesRegistered} courses auto-registered
+              </Badge>
+            )}
             {result.duplicates > 0 && (
               <Badge className="bg-orange-100 text-orange-700 border-0">
                 ⚠️ {result.duplicates} duplicates skipped
               </Badge>
             )}
-            <Badge className="bg-blue-100 text-blue-700 border-0">
+            <Badge className="bg-primary/10 text-primary border-0">
               Batch: {result.batchId}
             </Badge>
           </div>
           <Button
-            className="mt-4 bg-blue-600 hover:bg-blue-700"
+            className="mt-4 bg-primary hover:bg-primary/90"
             onClick={() => {
               setPhase("upload");
               setResult(null);
               setPreviewRows([]);
               setMappings([]);
+              setFileName("");
             }}
             data-ocid="ai_bulk.new_button"
           >
@@ -524,16 +719,26 @@ export function AIBulkUploadRegistration() {
         <Button
           variant="ghost"
           size="sm"
-          className="text-slate-400"
+          className="text-muted-foreground"
           onClick={() =>
             downloadCSV("export_preview.csv", [
-              ["matric_number", "name", "email", "department", "level"],
+              [
+                "matric_number",
+                "name",
+                "email",
+                "department",
+                "level",
+                "programme_type",
+                "entry_mode",
+              ],
               ...previewRows.map((r) => [
                 r.fields.matric_number,
                 r.fields.name,
                 r.fields.email,
                 r.fields.department,
                 r.fields.level,
+                r.fields.programme_type || "NUC",
+                r.fields.entry_mode || "UTME",
               ]),
             ])
           }

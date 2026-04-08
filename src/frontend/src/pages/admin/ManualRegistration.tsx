@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { DocumentScanner } from "../../components/DocumentScanner";
+import { getCompulsoryCourses } from "../../utils/fuekCourseData";
 import {
   DEPARTMENTS,
   INSTITUTION_CATEGORIES,
@@ -25,9 +26,62 @@ import {
   upsertExtendedStudent,
   validateEmail,
 } from "../../utils/registrationUtils";
-import { getLocalStudents, saveLocalStudents } from "../../utils/sampleData";
+import {
+  getLocalRegistrations,
+  getLocalStudents,
+  saveLocalRegistrations,
+  saveLocalStudents,
+} from "../../utils/sampleData";
 
 type Step = 1 | 2 | 3 | 4;
+
+const PROGRAMME_TYPES = [
+  "NCE",
+  "NUC",
+  "OND",
+  "HND",
+  "PGD",
+  "PGDE",
+  "PhD",
+  "MSc",
+  "MPhil",
+  "Certificate",
+] as const;
+type ProgrammeType = (typeof PROGRAMME_TYPES)[number];
+
+const ENTRY_MODES = ["UTME", "DE"] as const;
+
+const SUBJECT_COMBINATIONS = [
+  "CSC/MAT",
+  "PHY/CSC",
+  "BIO/CSC",
+  "PHY/CHE",
+  "EDU/CSC",
+  "EDU/MAT",
+  "EDU/BIO",
+  "EDU/PHY",
+  "BIO/CHE",
+  "MAT/PHY",
+  "HKE/BIO",
+  "HED/BIO",
+];
+
+const POSTGRAD_TYPES: ProgrammeType[] = ["PGD", "PGDE", "PhD", "MSc", "MPhil"];
+
+function levelToNumber(level: string): number | string {
+  if (level === "NCE I" || level === "100") return 100;
+  if (level === "NCE II" || level === "200") return 200;
+  if (level === "NCE III" || level === "300") return 300;
+  if (level === "400") return 400;
+  if (level === "ND I") return 100;
+  if (level === "ND II") return 200;
+  if (level === "HND I") return 300;
+  if (level === "HND II") return 400;
+  if (["PGD", "PGDE"].includes(level)) return 700;
+  if (["MSc", "MPhil"].includes(level)) return 800;
+  if (level === "PhD") return 1000;
+  return "Batch";
+}
 
 interface PersonalInfo {
   matricNumber: string;
@@ -37,11 +91,14 @@ interface PersonalInfo {
   dateOfBirth: string;
   address: string;
 }
+
 interface AcademicInfo {
   department: string;
   level: string;
   subCombination: string;
   institutionCategory: string;
+  programmeType: ProgrammeType;
+  entryMode: string;
 }
 
 const defaultPersonal: PersonalInfo = {
@@ -52,12 +109,45 @@ const defaultPersonal: PersonalInfo = {
   dateOfBirth: "",
   address: "",
 };
+
 const defaultAcademic: AcademicInfo = {
   department: "",
   level: "100",
   subCombination: "",
   institutionCategory: "university",
+  programmeType: "NUC",
+  entryMode: "UTME",
 };
+
+function autoRegisterCourses(
+  matricNumber: string,
+  programmeType: string,
+  level: string,
+) {
+  const numericLevel = levelToNumber(level);
+  const compulsory = getCompulsoryCourses(programmeType, numericLevel);
+  if (compulsory.length === 0) return 0;
+
+  const existing = getLocalRegistrations();
+  let added = 0;
+  for (const c of compulsory) {
+    const alreadyExists = existing.some(
+      (r) => r.studentMatric === matricNumber && r.courseCode === c.code,
+    );
+    if (!alreadyExists) {
+      existing.push({
+        id: `REG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        studentMatric: matricNumber,
+        courseCode: c.code,
+        semester: c.semester === "Both" ? "First" : c.semester,
+        registeredAt: new Date().toISOString(),
+      });
+      added++;
+    }
+  }
+  saveLocalRegistrations(existing);
+  return added;
+}
 
 export function ManualRegistration() {
   const [step, setStep] = useState<Step>(1);
@@ -68,8 +158,21 @@ export function ManualRegistration() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [regId, setRegId] = useState<string>("");
+  const [coursesRegistered, setCoursesRegistered] = useState(0);
 
   const existingMatrics = getLocalStudents().map((s) => s.matricNumber);
+
+  const previewCourses = getCompulsoryCourses(
+    academic.programmeType,
+    levelToNumber(academic.level),
+  );
+
+  const showEntryMode =
+    academic.programmeType === "NCE" || academic.programmeType === "NUC";
+  const showSubjectCombination =
+    academic.programmeType === "NCE" ||
+    academic.institutionCategory === "college_of_education";
+  const showSubjectComboSelect = showSubjectCombination;
 
   const validateStep1 = () => {
     const e: Record<string, string> = {};
@@ -88,6 +191,7 @@ export function ManualRegistration() {
     const e: Record<string, string> = {};
     if (!academic.department) e.department = "Required";
     if (!academic.level) e.level = "Required";
+    if (!academic.programmeType) e.programmeType = "Required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -117,6 +221,8 @@ export function ManualRegistration() {
         | "university"
         | "college_of_education"
         | "polytechnic",
+      programmeType: academic.programmeType,
+      entryMode: academic.entryMode,
       registrationSource: "manual" as const,
       registrationStatus: "pending_approval" as const,
       registrationId: id,
@@ -127,7 +233,6 @@ export function ManualRegistration() {
       registeredAt: new Date().toISOString(),
     };
 
-    // Save to both stores
     const students = getLocalStudents();
     if (!students.find((s) => s.matricNumber === normalizedMatric)) {
       students.push(student);
@@ -144,9 +249,17 @@ export function ManualRegistration() {
       newStatus: "pending_approval",
     });
 
+    const registered = autoRegisterCourses(
+      normalizedMatric,
+      academic.programmeType,
+      academic.level,
+    );
+    setCoursesRegistered(registered);
     setRegId(id);
     setSubmitting(false);
-    toast.success(`Registration ${id} submitted successfully!`);
+    toast.success(
+      `Registration ${id} submitted — ${registered} courses auto-registered!`,
+    );
     setStep(4);
   };
 
@@ -157,6 +270,7 @@ export function ManualRegistration() {
     setPhotoUrl("");
     setErrors({});
     setRegId("");
+    setCoursesRegistered(0);
   };
 
   const stepLabels = [
@@ -181,13 +295,23 @@ export function ManualRegistration() {
           <p className="text-sm text-green-600 mt-1">
             Status: Pending Admin/HOD Approval
           </p>
-          <Button
-            className="mt-6 bg-blue-600 hover:bg-blue-700"
-            onClick={handleReset}
-            data-ocid="manual_reg.new_button"
-          >
-            Register Another Student
-          </Button>
+          {coursesRegistered > 0 && (
+            <div className="mt-3 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+              <span className="text-blue-700 text-sm font-medium">
+                📚 {coursesRegistered} compulsory courses auto-registered for{" "}
+                {academic.programmeType} programme
+              </span>
+            </div>
+          )}
+          <div>
+            <Button
+              className="mt-6 bg-blue-600 hover:bg-blue-700"
+              onClick={handleReset}
+              data-ocid="manual_reg.new_button"
+            >
+              Register Another Student
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -196,10 +320,10 @@ export function ManualRegistration() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-foreground">
           Manual Registration
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
+        <p className="text-muted-foreground text-sm mt-1">
           Register a new student using the multi-step form
         </p>
       </div>
@@ -213,18 +337,18 @@ export function ManualRegistration() {
           return (
             <div key={label} className="flex items-center gap-2 flex-1">
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isDone ? "bg-green-500 text-white" : isActive ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"}`}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isDone ? "bg-green-500 text-white" : isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
               >
                 {isDone ? "✓" : n}
               </div>
               <span
-                className={`text-xs hidden sm:block ${isActive ? "text-blue-700 font-semibold" : "text-slate-400"}`}
+                className={`text-xs hidden sm:block ${isActive ? "text-primary font-semibold" : "text-muted-foreground"}`}
               >
                 {label}
               </span>
               {i < stepLabels.length - 1 && (
                 <div
-                  className={`flex-1 h-0.5 ${isDone ? "bg-green-400" : "bg-slate-200"}`}
+                  className={`flex-1 h-0.5 ${isDone ? "bg-green-400" : "bg-border"}`}
                 />
               )}
             </div>
@@ -346,6 +470,72 @@ export function ManualRegistration() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              {/* Programme Type */}
+              <div>
+                <Label>
+                  Programme Type <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={academic.programmeType}
+                  onValueChange={(v) =>
+                    setAcademic((a) => ({
+                      ...a,
+                      programmeType: v as ProgrammeType,
+                      entryMode: POSTGRAD_TYPES.includes(v as ProgrammeType)
+                        ? "Direct"
+                        : a.entryMode,
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    className="mt-1"
+                    data-ocid="manual_reg.programme_select"
+                  >
+                    <SelectValue placeholder="Select programme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROGRAMME_TYPES.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.programmeType && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.programmeType}
+                  </p>
+                )}
+              </div>
+
+              {/* Entry Mode */}
+              {showEntryMode && (
+                <div>
+                  <Label>Entry Mode</Label>
+                  <Select
+                    value={academic.entryMode}
+                    onValueChange={(v) =>
+                      setAcademic((a) => ({ ...a, entryMode: v }))
+                    }
+                  >
+                    <SelectTrigger
+                      className="mt-1"
+                      data-ocid="manual_reg.entry_mode_select"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ENTRY_MODES.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Department */}
               <div>
                 <Label>
                   Department <span className="text-red-500">*</span>
@@ -376,6 +566,8 @@ export function ManualRegistration() {
                   </p>
                 )}
               </div>
+
+              {/* Level */}
               <div>
                 <Label>
                   Level <span className="text-red-500">*</span>
@@ -401,6 +593,8 @@ export function ManualRegistration() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Institution Category */}
               <div>
                 <Label>Institution Category</Label>
                 <Select
@@ -421,21 +615,61 @@ export function ManualRegistration() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Subject Combination (CoE)</Label>
-                <Input
-                  className="mt-1"
-                  placeholder="e.g. CSC/MAT"
-                  value={academic.subCombination}
-                  onChange={(e) =>
-                    setAcademic((a) => ({
-                      ...a,
-                      subCombination: e.target.value,
-                    }))
-                  }
-                />
-              </div>
+
+              {/* Subject Combination */}
+              {showSubjectComboSelect && (
+                <div>
+                  <Label>Subject Combination (NCE/CoE)</Label>
+                  <Select
+                    value={academic.subCombination}
+                    onValueChange={(v) =>
+                      setAcademic((a) => ({ ...a, subCombination: v }))
+                    }
+                  >
+                    <SelectTrigger
+                      className="mt-1"
+                      data-ocid="manual_reg.subcomb_select"
+                    >
+                      <SelectValue placeholder="Select combination" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUBJECT_COMBINATIONS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
+
+            {/* Compulsory courses preview */}
+            {previewCourses.length > 0 && (
+              <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-4">
+                <p className="text-xs font-semibold text-blue-800 mb-2">
+                  📚 Courses that will be auto-registered (
+                  {previewCourses.length} compulsory):
+                </p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {previewCourses.map((c) => (
+                    <div key={c.id} className="flex items-center gap-2 text-xs">
+                      <Badge className="bg-blue-100 text-blue-700 border-0 font-mono">
+                        {c.code}
+                      </Badge>
+                      <span className="text-blue-700">{c.title}</span>
+                      <span className="text-blue-400 ml-auto">
+                        {c.creditUnits} CU
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-blue-500 mt-2">
+                  Total: {previewCourses.reduce((s, c) => s + c.creditUnits, 0)}{" "}
+                  credit units
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -469,13 +703,13 @@ export function ManualRegistration() {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl">
-                <p className="text-slate-500 mb-4">
+              <div className="text-center py-8 border-2 border-dashed border-border rounded-xl">
+                <p className="text-muted-foreground mb-4">
                   Capture or upload student passport photo
                 </p>
                 <Button
                   onClick={() => setScannerOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-primary hover:bg-primary/90"
                   data-ocid="manual_reg.scan_button"
                 >
                   📷 Open Camera / Upload
@@ -501,6 +735,8 @@ export function ManualRegistration() {
                 ["Phone", personal.phone],
                 ["Date of Birth", personal.dateOfBirth || "—"],
                 ["Address", personal.address || "—"],
+                ["Programme Type", academic.programmeType],
+                ["Entry Mode", academic.entryMode],
                 ["Department", academic.department],
                 ["Level", academic.level],
                 [
@@ -511,9 +747,9 @@ export function ManualRegistration() {
                 ],
                 ["Subject Combination", academic.subCombination || "—"],
               ].map(([label, val]) => (
-                <div key={label} className="bg-slate-50 rounded-lg p-3">
-                  <p className="text-slate-400 text-xs">{label}</p>
-                  <p className="font-medium text-slate-800 mt-0.5 truncate">
+                <div key={label} className="bg-muted/40 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{label}</p>
+                  <p className="font-medium text-foreground mt-0.5 truncate">
                     {val}
                   </p>
                 </div>
@@ -527,6 +763,14 @@ export function ManualRegistration() {
                   className="w-10 h-10 rounded-full object-cover"
                 />
                 <span className="text-sm text-green-700">Photo attached</span>
+              </div>
+            )}
+            {previewCourses.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs font-semibold text-blue-800 mb-1">
+                  📚 {previewCourses.length} compulsory courses will be
+                  auto-registered on submit
+                </p>
               </div>
             )}
           </CardContent>
@@ -549,7 +793,7 @@ export function ManualRegistration() {
           )}
           {step < 3 ? (
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={handleNext}
               data-ocid="manual_reg.next_button"
             >
@@ -557,7 +801,7 @@ export function ManualRegistration() {
             </Button>
           ) : step === 3 ? (
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={() => setStep(4)}
               data-ocid="manual_reg.review_button"
             >

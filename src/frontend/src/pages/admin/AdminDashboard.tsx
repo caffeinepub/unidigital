@@ -64,11 +64,13 @@ import { PromotionResults } from "../shared/PromotionResults";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentProfilePortal } from "../shared/StudentProfilePortal";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
+import { GraduationTracker } from "../student/GraduationTracker";
 import { AIBulkUploadRegistration } from "./AIBulkUploadRegistration";
 import { AIDashboard } from "./AIDashboard";
 import { AISmartScanRegistration } from "./AISmartScanRegistration";
 import { AcademicCalendarAdmin } from "./AcademicCalendarAdmin";
 import { AcademicStatus } from "./AcademicStatus";
+import { AdminBulkCourseRegistration } from "./AdminBulkCourseRegistration";
 import { AdvancedAnalytics } from "./AdvancedAnalytics";
 import { AlumniAdmin } from "./AlumniAdmin";
 import { AnalyticsDashboard } from "./AnalyticsDashboard";
@@ -154,6 +156,7 @@ type Page =
   | "result-publication"
   | "academic-status"
   | "graduation-clearance"
+  | "graduation-tracker"
   | "analytics-v2"
   | "data-import"
   | "ai-dashboard"
@@ -194,6 +197,7 @@ type Page =
   | "bulk-registration"
   | "ai-scan-registration"
   | "ai-bulk-registration"
+  | "bulk-course-registration"
   | "registration-doc-archive"
   | "jamb-portal"
   | "fee-management"
@@ -1371,6 +1375,8 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "result-publication") return <ResultPublication />;
   if (activePage === "academic-status") return <AcademicStatus />;
   if (activePage === "graduation-clearance") return <GraduationClearance />;
+  if (activePage === "graduation-tracker")
+    return <GraduationTracker userRole="admin" />;
   if (activePage === "analytics-v2") return <AnalyticsV2 />;
   if (activePage === "data-import") return <DataImport />;
   if (activePage === "ai-dashboard") return <AIDashboard />;
@@ -1428,6 +1434,8 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "ai-scan-registration") return <AISmartScanRegistration />;
   if (activePage === "ai-bulk-registration")
     return <AIBulkUploadRegistration />;
+  if (activePage === "bulk-course-registration")
+    return <AdminBulkCourseRegistration />;
   if (activePage === "registration-doc-archive")
     return <RegistrationDocumentArchive />;
   if (activePage === "jamb-portal") return <JAMBAdmissionPortal />;

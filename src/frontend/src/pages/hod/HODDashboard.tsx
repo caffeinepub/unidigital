@@ -46,6 +46,7 @@ import { PassFailureLists } from "../shared/PassFailureLists";
 import { PromotionResults } from "../shared/PromotionResults";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
+import { GraduationTracker } from "../student/GraduationTracker";
 import { AppraisalReview } from "./AppraisalReview";
 import { BudgetRequest } from "./BudgetRequest";
 import { CurriculumManagement } from "./CurriculumManagement";
@@ -78,7 +79,8 @@ type Page =
   | "communication-center"
   | "announcement-view"
   | "curriculum-management"
-  | "certificate-courses";
+  | "certificate-courses"
+  | "graduation-tracker";
 interface Props {
   activePage: Page;
 }
@@ -210,6 +212,8 @@ export function HODDashboard({ activePage }: Props) {
         <CertificateCourses />
       </GatedRoute>
     );
+  if (activePage === "graduation-tracker")
+    return <GraduationTracker userRole="hod" />;
 
   if (activePage === "hod-students")
     return (
