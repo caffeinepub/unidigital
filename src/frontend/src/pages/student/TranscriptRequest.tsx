@@ -3,6 +3,7 @@ import {
   Clock,
   Download,
   FileText,
+  MapPin,
   Package,
   Send,
   Truck,
@@ -19,23 +20,31 @@ import {
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Separator } from "../../components/ui/separator";
-import { Textarea } from "../../components/ui/textarea";
 import { getLocalStudents } from "../../utils/sampleData";
+
+type RequestStatus =
+  | "pending_payment"
+  | "pending_registrar"
+  | "processing"
+  | "dispatched"
+  | "delivered";
 
 interface TranscriptRequestRecord {
   id: string;
   matric: string;
-  purpose: "further_studies" | "employment" | "personal";
+  destinationType: "university" | "employer" | "personal" | "embassy";
   delivery: "electronic" | "physical";
   recipient: string;
   copies: number;
   urgency: "normal" | "express";
-  status: "pending" | "processing" | "ready" | "dispatched";
+  status: RequestStatus;
   submittedAt: string;
   notes?: string;
   fee: number;
   paymentRef?: string;
   paidAt?: string;
+  trackingNumber?: string;
+  updatedAt?: string;
 }
 
 const LS_KEY = "unidigital_transcript_requests";
@@ -48,35 +57,46 @@ function saveRequests(data: TranscriptRequestRecord[]) {
 }
 
 const STATUS_CONFIG: Record<
-  TranscriptRequestRecord["status"],
-  { label: string; color: string; icon: React.ReactNode }
+  RequestStatus,
+  { label: string; color: string; icon: React.ReactNode; step: number }
 > = {
-  pending: {
-    label: "Pending",
+  pending_payment: {
+    label: "Pending Payment",
     color: "bg-amber-100 text-amber-800",
     icon: <Clock size={12} />,
+    step: 1,
+  },
+  pending_registrar: {
+    label: "Pending Registrar",
+    color: "bg-blue-100 text-blue-800",
+    icon: <Package size={12} />,
+    step: 2,
   },
   processing: {
     label: "Processing",
-    color: "bg-blue-100 text-blue-800",
-    icon: <Package size={12} />,
-  },
-  ready: {
-    label: "Ready",
-    color: "bg-green-100 text-green-800",
-    icon: <CheckCircle size={12} />,
+    color: "bg-indigo-100 text-indigo-800",
+    icon: <FileText size={12} />,
+    step: 3,
   },
   dispatched: {
     label: "Dispatched",
     color: "bg-purple-100 text-purple-800",
     icon: <Truck size={12} />,
+    step: 4,
+  },
+  delivered: {
+    label: "Delivered",
+    color: "bg-green-100 text-green-800",
+    icon: <CheckCircle size={12} />,
+    step: 5,
   },
 };
 
-const PURPOSE_LABELS: Record<TranscriptRequestRecord["purpose"], string> = {
-  further_studies: "Further Studies / Postgraduate",
-  employment: "Employment / Job Application",
+const DESTINATION_LABELS: Record<string, string> = {
+  university: "University / Postgraduate Admission",
+  employer: "Employer / Job Application",
   personal: "Personal Use",
+  embassy: "Embassy / Visa Application",
 };
 
 interface Props {
@@ -99,7 +119,7 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
   const [cardNumber, setCardNumber] = useState("");
 
   const [form, setForm] = useState({
-    purpose: "further_studies" as TranscriptRequestRecord["purpose"],
+    destinationType: "university" as TranscriptRequestRecord["destinationType"],
     delivery: "electronic" as TranscriptRequestRecord["delivery"],
     recipient: "",
     copies: 1,
@@ -109,7 +129,15 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
   const [pendingRequest, setPendingRequest] =
     useState<TranscriptRequestRecord | null>(null);
 
-  const fee = form.urgency === "express" ? 5000 : 2500;
+  const fee =
+    form.delivery === "physical"
+      ? form.urgency === "express"
+        ? 7500
+        : 4000
+      : form.urgency === "express"
+        ? 5000
+        : 2500;
+
   const myRequests = requests.filter((r) => r.matric === student?.matricNumber);
 
   function handleSubmitForm() {
@@ -117,12 +145,12 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
     const req: TranscriptRequestRecord = {
       id: `TR-${Date.now()}`,
       matric: student.matricNumber,
-      purpose: form.purpose,
+      destinationType: form.destinationType,
       delivery: form.delivery,
       recipient: form.recipient,
       copies: form.copies,
       urgency: form.urgency,
-      status: "pending",
+      status: "pending_payment",
       submittedAt: new Date().toISOString(),
       fee,
     };
@@ -136,6 +164,7 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
     await new Promise((r) => setTimeout(r, 1800));
     const paid: TranscriptRequestRecord = {
       ...pendingRequest,
+      status: "pending_registrar",
       paymentRef: `PAY-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
       paidAt: new Date().toISOString(),
     };
@@ -151,7 +180,7 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
     setPaySuccess(false);
     setCardNumber("");
     setForm({
-      purpose: "further_studies",
+      destinationType: "university",
       delivery: "electronic",
       recipient: "",
       copies: 1,
@@ -180,10 +209,14 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
             Payment Successful!
           </h2>
           <p className="text-muted-foreground text-sm">
-            Your transcript request has been submitted. Reference:{" "}
+            Your transcript request has been submitted to the Registrar's
+            office. Reference:{" "}
             <span className="font-mono font-semibold">
               {pendingRequest.paymentRef}
             </span>
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Status: <strong>Pending Registrar Review</strong>
           </p>
           <Button onClick={handleDone} data-ocid="transcript-req.done_button">
             View My Requests
@@ -212,8 +245,8 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Purpose</span>
-              <span>{PURPOSE_LABELS[pendingRequest.purpose]}</span>
+              <span className="text-muted-foreground">Destination</span>
+              <span>{DESTINATION_LABELS[pendingRequest.destinationType]}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Delivery</span>
@@ -337,24 +370,24 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>Purpose of Transcript</Label>
+              <Label>Destination Type</Label>
               <select
                 className="w-full mt-1.5 border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                value={form.purpose}
+                value={form.destinationType}
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    purpose: e.target
-                      .value as TranscriptRequestRecord["purpose"],
+                    destinationType: e.target
+                      .value as TranscriptRequestRecord["destinationType"],
                   })
                 }
-                data-ocid="transcript-req.purpose_select"
+                data-ocid="transcript-req.destination_select"
               >
-                <option value="further_studies">
-                  Further Studies / Postgraduate
-                </option>
-                <option value="employment">Employment / Job Application</option>
-                <option value="personal">Personal Use</option>
+                {Object.entries(DESTINATION_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -366,11 +399,7 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
                     key={d}
                     type="button"
                     onClick={() => setForm({ ...form, delivery: d })}
-                    className={`border rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                      form.delivery === d
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border text-foreground hover:bg-muted/40"
-                    }`}
+                    className={`border rounded-lg px-4 py-3 text-sm font-medium transition-colors ${form.delivery === d ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted/40"}`}
                     data-ocid={`transcript-req.delivery_${d}`}
                   >
                     {d === "electronic"
@@ -432,9 +461,17 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
                   data-ocid="transcript-req.urgency_select"
                 >
                   <option value="normal">
-                    Normal — ₦2,500 (3–5 working days)
+                    Normal —{" "}
+                    {form.delivery === "physical"
+                      ? "₦4,000 (5–7 days)"
+                      : "₦2,500 (3–5 days)"}
                   </option>
-                  <option value="express">Express — ₦5,000 (24 hours)</option>
+                  <option value="express">
+                    Express —{" "}
+                    {form.delivery === "physical"
+                      ? "₦7,500 (48 hours)"
+                      : "₦5,000 (24 hours)"}
+                  </option>
                 </select>
               </div>
             </div>
@@ -448,15 +485,17 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {form.urgency === "express"
-                  ? "Express processing — ready within 24 hours."
-                  : "Standard processing — ready in 3–5 working days."}
+                  ? "Express processing."
+                  : "Standard processing."}{" "}
+                {form.delivery === "physical"
+                  ? "Physical copy will be posted."
+                  : "Electronic copy will be emailed."}
               </p>
             </div>
 
             <Button
               className="w-full"
               onClick={handleSubmitForm}
-              disabled={!student}
               data-ocid="transcript-req.proceed_button"
             >
               Proceed to Payment
@@ -532,68 +571,106 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
                 return (
                   <div
                     key={req.id}
-                    className="px-4 py-4 flex items-start justify-between gap-3"
+                    className="px-4 py-4"
                     data-ocid={`transcript-req.item.${i + 1}`}
                   >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm text-foreground">
-                          {PURPOSE_LABELS[req.purpose]}
-                        </span>
-                        <Badge
-                          className={`${cfg.color} border-0 flex items-center gap-1 text-xs`}
-                        >
-                          {cfg.icon} {cfg.label}
-                        </Badge>
-                        <Badge
-                          className={`border-0 text-xs ${req.urgency === "express" ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"}`}
-                        >
-                          {req.urgency === "express" ? "Express" : "Normal"}
-                        </Badge>
+                    {/* Status progress */}
+                    <div className="flex items-center gap-1 mb-3 overflow-x-auto pb-1">
+                      {(
+                        Object.entries(STATUS_CONFIG) as [
+                          RequestStatus,
+                          (typeof STATUS_CONFIG)[RequestStatus],
+                        ][]
+                      )
+                        .sort((a, b) => a[1].step - b[1].step)
+                        .map(([key, meta], si, arr) => {
+                          const active = meta.step <= cfg.step;
+                          const current = key === req.status;
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-center gap-1 shrink-0"
+                            >
+                              <div
+                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${current ? meta.color : active ? "bg-muted text-foreground" : "bg-muted/40 text-muted-foreground"}`}
+                              >
+                                {meta.icon}{" "}
+                                <span className="whitespace-nowrap">
+                                  {meta.label}
+                                </span>
+                              </div>
+                              {si < arr.length - 1 && (
+                                <div
+                                  className={`w-4 h-px ${active ? "bg-primary" : "bg-border"}`}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm text-foreground">
+                            {DESTINATION_LABELS[req.destinationType]}
+                          </span>
+                          <Badge
+                            className={`border-0 text-xs ${req.urgency === "express" ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"}`}
+                          >
+                            {req.urgency === "express" ? "Express" : "Normal"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Ref:{" "}
+                          <span className="font-mono">
+                            {req.paymentRef || req.id}
+                          </span>{" "}
+                          &bull; Submitted{" "}
+                          {new Date(req.submittedAt).toLocaleDateString(
+                            "en-NG",
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Delivery:{" "}
+                          <span className="capitalize">{req.delivery}</span>{" "}
+                          &bull; {req.copies}{" "}
+                          {req.copies === 1 ? "copy" : "copies"} &bull; ₦
+                          {req.fee.toLocaleString()} paid
+                        </p>
+                        {req.recipient && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            To: {req.recipient}
+                          </p>
+                        )}
+                        {req.trackingNumber && (
+                          <p className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
+                            <MapPin size={11} /> Tracking: {req.trackingNumber}
+                          </p>
+                        )}
+                        {req.notes && (
+                          <p className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                            Note: {req.notes}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Ref:{" "}
-                        <span className="font-mono">
-                          {req.paymentRef || req.id}
-                        </span>{" "}
-                        &bull; Submitted{" "}
-                        {new Date(req.submittedAt).toLocaleDateString("en-NG")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Delivery:{" "}
-                        <span className="capitalize">{req.delivery}</span>{" "}
-                        &bull; {req.copies}{" "}
-                        {req.copies === 1 ? "copy" : "copies"} &bull; ₦
-                        {req.fee.toLocaleString()} paid
-                      </p>
-                      {req.recipient && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          To: {req.recipient}
-                        </p>
-                      )}
-                      {req.notes && (
-                        <p className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded">
-                          Note: {req.notes}
-                        </p>
+                      {req.status === "delivered" &&
+                        req.delivery === "electronic" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0"
+                            onClick={() => window.print()}
+                            data-ocid="transcript-req.download_button"
+                          >
+                            <Download size={14} className="mr-1" /> Download
+                          </Button>
+                        )}
+                      {req.status === "dispatched" && (
+                        <Badge className="bg-purple-100 text-purple-700 border-0 shrink-0">
+                          <Send size={12} className="mr-1" /> Sent
+                        </Badge>
                       )}
                     </div>
-                    {req.status === "ready" &&
-                      req.delivery === "electronic" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0"
-                          onClick={() => window.print()}
-                          data-ocid="transcript-req.download_button"
-                        >
-                          <Download size={14} className="mr-1" /> Download
-                        </Button>
-                      )}
-                    {req.status === "dispatched" && (
-                      <Badge className="bg-purple-100 text-purple-700 border-0 shrink-0">
-                        <Send size={12} className="mr-1" /> Sent
-                      </Badge>
-                    )}
                   </div>
                 );
               })}
@@ -602,27 +679,44 @@ export function TranscriptRequest({ userEmail = "", userName = "" }: Props) {
         </CardContent>
       </Card>
 
-      {/* Fee guide */}
+      {/* Fee schedule */}
       <Card className="bg-muted/30">
         <CardContent className="pt-4 pb-4">
-          <h3 className="text-sm font-semibold text-foreground mb-2">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
             Transcript Fee Schedule
           </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-card border rounded-lg px-4 py-3">
-              <p className="font-medium text-foreground">Normal Processing</p>
-              <p className="text-2xl font-bold text-primary mt-1">₦2,500</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                3–5 working days
-              </p>
-            </div>
-            <div className="bg-card border rounded-lg px-4 py-3">
-              <p className="font-medium text-foreground">Express Processing</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">₦5,000</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Within 24 hours
-              </p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            {[
+              {
+                label: "Electronic — Normal",
+                price: "₦2,500",
+                sub: "3–5 working days",
+              },
+              {
+                label: "Electronic — Express",
+                price: "₦5,000",
+                sub: "Within 24 hours",
+              },
+              {
+                label: "Physical — Normal",
+                price: "₦4,000",
+                sub: "5–7 working days",
+              },
+              {
+                label: "Physical — Express",
+                price: "₦7,500",
+                sub: "Within 48 hours",
+              },
+            ].map((f) => (
+              <div
+                key={f.label}
+                className="bg-card border rounded-lg px-3 py-3"
+              >
+                <p className="font-medium text-foreground text-xs">{f.label}</p>
+                <p className="text-xl font-bold text-primary mt-1">{f.price}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{f.sub}</p>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

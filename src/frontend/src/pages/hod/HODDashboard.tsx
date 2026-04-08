@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { GatedRoute } from "../../components/GatedRoute";
 import { StatCard } from "../../components/StatCard";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -31,6 +32,7 @@ import {
   getLocalCourses,
   getLocalStudents,
 } from "../../utils/sampleData";
+import { CertificateCourses } from "../admin/CertificateCourses";
 import { ComplaintsAdmin } from "../admin/ComplaintsAdmin";
 import { DepartmentAnalytics } from "../admin/DepartmentAnalytics";
 import { StudentDisciplinaryRecords } from "../admin/StudentDisciplinaryRecords";
@@ -45,6 +47,7 @@ import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AppraisalReview } from "./AppraisalReview";
 import { BudgetRequest } from "./BudgetRequest";
+import { CurriculumManagement } from "./CurriculumManagement";
 import { DepartmentResults } from "./DepartmentResults";
 import { HODSettings } from "./HODSettings";
 import { ResultEntryReview } from "./ResultEntryReview";
@@ -71,7 +74,9 @@ type Page =
   | "budget-request"
   | "course-catalog"
   | "communication-center"
-  | "announcement-view";
+  | "announcement-view"
+  | "curriculum-management"
+  | "certificate-courses";
 interface Props {
   activePage: Page;
 }
@@ -191,10 +196,17 @@ export function HODDashboard({ activePage }: Props) {
     return <StudentDisciplinaryRecords userRole="hod" />;
   if (activePage === "memos") return <MemoAcknowledgment userRole="hod" />;
   if (activePage === "budget-request") return <BudgetRequest />;
+  if (activePage === "curriculum-management") return <CurriculumManagement />;
   if (activePage === "course-catalog") return <CourseCatalog />;
   if (activePage === "communication-center") return <CommunicationCenter />;
   if (activePage === "announcement-view")
     return <AnnouncementView role={"lecturer" as never} />;
+  if (activePage === "certificate-courses")
+    return (
+      <GatedRoute pageKey="certificate-courses">
+        <CertificateCourses />
+      </GatedRoute>
+    );
 
   if (activePage === "hod-students")
     return (

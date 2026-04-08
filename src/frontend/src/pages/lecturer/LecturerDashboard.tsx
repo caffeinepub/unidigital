@@ -81,7 +81,8 @@ type Page =
   | "staff-directory"
   | "course-catalog"
   | "announcement-view"
-  | "communication-center";
+  | "communication-center"
+  | "certificate-courses";
 
 interface Props {
   activePage: Page;
@@ -430,6 +431,63 @@ export function LecturerDashboard({ activePage }: Props) {
   if (activePage === "announcement-view")
     return <AnnouncementView role={"lecturer" as never} />;
   if (activePage === "communication-center") return <CommunicationCenter />;
+  if (activePage === "certificate-courses")
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-slate-800">
+          Certificate Courses
+        </h1>
+        <p className="text-slate-500 text-sm">
+          View certificate programmes running in your department. Contact the
+          Admin to manage enrolments, results, or batch schedules.
+        </p>
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            {[
+              {
+                dept: "Computer Science",
+                batch: "1st Batch (Jan–Mar)",
+                programme: "3-Month Certificate in CS",
+                enrolled: 24,
+                status: "Active",
+              },
+              {
+                dept: "Mathematics",
+                batch: "2nd Batch (May–Jul)",
+                programme: "3-Month Certificate in Mathematics",
+                enrolled: 18,
+                status: "Active",
+              },
+              {
+                dept: "Biology",
+                batch: "3rd Batch (Sep–Nov)",
+                programme: "3-Month Certificate in Biology",
+                enrolled: 15,
+                status: "Upcoming",
+              },
+            ].map((item) => (
+              <div
+                key={item.batch}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b last:border-0 pb-3 last:pb-0"
+              >
+                <div>
+                  <p className="font-medium text-sm">{item.programme}</p>
+                  <p className="text-xs text-slate-500">
+                    {item.dept} &bull; {item.batch} &bull; {item.enrolled}{" "}
+                    enrolled
+                  </p>
+                </div>
+                <Badge
+                  variant={item.status === "Active" ? "default" : "outline"}
+                >
+                  {item.status}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
 
   return null;
 }

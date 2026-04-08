@@ -5,7 +5,10 @@ import {
   Clock,
   Edit,
   Plus,
+  Printer,
   Search,
+  ToggleLeft,
+  ToggleRight,
   Trash2,
   Users,
 } from "lucide-react";
@@ -21,7 +24,6 @@ import {
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Separator } from "../../components/ui/separator";
-import { Textarea } from "../../components/ui/textarea";
 import {
   type CourseRecord,
   getLocalCourses,
@@ -50,6 +52,7 @@ interface ExtendedCourse extends CourseRecord {
   prerequisites: string;
   type: "compulsory" | "elective";
   approvalStatus: "proposed" | "approved";
+  available: boolean;
 }
 
 function loadCurriculum(): CurriculumEntry[] {
@@ -95,20 +98,21 @@ const EMPTY_FORM: Partial<ExtendedCourse> = {
   prerequisites: "",
   type: "compulsory",
   approvalStatus: "approved",
+  available: true,
 };
 
 export function CourseManagement() {
-  const [courses, setCourses] = useState<ExtendedCourse[]>(() => {
-    const base = getLocalCourses();
-    return base.map((c) => ({
+  const [courses, setCourses] = useState<ExtendedCourse[]>(() =>
+    getLocalCourses().map((c) => ({
       ...c,
       id: c.code,
       level: c.semester.includes("2021") ? "100" : "200",
       prerequisites: "",
       type: "compulsory" as const,
       approvalStatus: "approved" as const,
-    }));
-  });
+      available: true,
+    })),
+  );
 
   const staff = getLocalStaff();
 
@@ -124,7 +128,6 @@ export function CourseManagement() {
   const [form, setForm] = useState<Partial<ExtendedCourse>>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
-  // Curriculum state
   const [curriculumList, setCurriculumList] =
     useState<CurriculumEntry[]>(loadCurriculum);
   const [currDept, setCurrDept] = useState("Computer Science");
@@ -171,7 +174,6 @@ export function CourseManagement() {
     setFormError("");
     setShowForm(true);
   };
-
   const openEdit = (c: ExtendedCourse) => {
     setForm({ ...c });
     setEditId(c.code);
@@ -189,21 +191,20 @@ export function CourseManagement() {
       setFormError("Credit units must be between 1 and 12.");
       return;
     }
-
     const entry: ExtendedCourse = {
-      code: form.code!.trim().toUpperCase(),
-      title: form.title!.trim(),
+      code: form.code.trim().toUpperCase(),
+      title: form.title.trim(),
       creditUnits: cu,
       department: form.department || "Computer Science",
       semester: form.semester || "2024/2025 First",
       lecturerId: form.lecturerId || "",
-      id: form.code!.trim().toUpperCase(),
+      id: form.code.trim().toUpperCase(),
       level: form.level || "100",
       prerequisites: form.prerequisites || "",
       type: form.type || "compulsory",
       approvalStatus: form.approvalStatus || "approved",
+      available: form.available !== false,
     };
-
     if (editId) {
       updateCourses(courses.map((c) => (c.code === editId ? entry : c)));
     } else {
@@ -220,7 +221,13 @@ export function CourseManagement() {
   const handleDelete = (code: string) => {
     updateCourses(courses.filter((c) => c.code !== code));
   };
-
+  const toggleAvailability = (code: string) => {
+    updateCourses(
+      courses.map((c) =>
+        c.code === code ? { ...c, available: !c.available } : c,
+      ),
+    );
+  };
   const assignLecturer = (courseCode: string, staffId: string) => {
     updateCourses(
       courses.map((c) =>
@@ -229,46 +236,47 @@ export function CourseManagement() {
     );
   };
 
-  // Curriculum: courses for selected dept/level/sem
   const currCourses = curriculumList.filter(
     (e) =>
       e.department === currDept &&
       e.level === currLevel &&
       e.semester === currSem,
   );
+  const totalCurrCredits = currCourses.reduce((sum, e) => {
+    const c = courses.find((x) => x.code === e.courseCode);
+    return sum + (c?.creditUnits ?? 0);
+  }, 0);
 
   const addToCurriculum = (courseCode: string) => {
     if (currCourses.find((e) => e.courseCode === courseCode)) return;
     const course = courses.find((c) => c.code === courseCode);
-    const totalCredits = currCourses.reduce((sum, e) => {
+    const totalCu = currCourses.reduce((sum, e) => {
       const c = courses.find((x) => x.code === e.courseCode);
       return sum + (c?.creditUnits ?? 0);
     }, 0);
-    const newCu = course?.creditUnits ?? 0;
-    if (totalCredits + newCu > 24) {
-      alert(
-        `Credit load limit exceeded. Current: ${totalCredits} units. Max: 24 units.`,
-      );
+    if (totalCu + (course?.creditUnits ?? 0) > 24) {
+      alert(`Credit load limit exceeded. Current: ${totalCu} / 24 units.`);
       return;
     }
-    const entry: CurriculumEntry = {
-      id: `CURR-${Date.now()}`,
-      department: currDept,
-      level: currLevel,
-      semester: currSem,
-      courseCode,
-      type: course?.type ?? "compulsory",
-      approvalStatus: "proposed",
-      proposedBy: "HOD",
-      creditMax: 24,
-    };
-    updateCurriculum([...curriculumList, entry]);
+    updateCurriculum([
+      ...curriculumList,
+      {
+        id: `CURR-${Date.now()}`,
+        department: currDept,
+        level: currLevel,
+        semester: currSem,
+        courseCode,
+        type: course?.type ?? "compulsory",
+        approvalStatus: "proposed",
+        proposedBy: "HOD",
+        creditMax: 24,
+      },
+    ]);
   };
 
   const removeCurrEntry = (id: string) => {
     updateCurriculum(curriculumList.filter((e) => e.id !== id));
   };
-
   const approveCurrEntry = (id: string) => {
     updateCurriculum(
       curriculumList.map((e) =>
@@ -279,27 +287,54 @@ export function CourseManagement() {
     );
   };
 
-  const totalCurrCredits = currCourses.reduce((sum, e) => {
-    const c = courses.find((x) => x.code === e.courseCode);
-    return sum + (c?.creditUnits ?? 0);
-  }, 0);
+  const printCurriculum = () => {
+    const lines = [
+      `CURRICULUM — ${currDept}`,
+      `Level: ${currLevel} | Semester: ${currSem}`,
+      `Total Credit Units: ${totalCurrCredits} / 24`,
+      "-".repeat(60),
+      ...(currCourses.length === 0
+        ? ["No courses added."]
+        : currCourses.map((e) => {
+            const c = courses.find((x) => x.code === e.courseCode);
+            return `${e.courseCode.padEnd(12)} ${(c?.title ?? "Unknown").padEnd(40)} ${c?.creditUnits ?? 0} CU  [${e.type}] [${e.approvalStatus}]`;
+          })),
+    ];
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(
+        `<pre style="font-family:monospace;padding:20px">${lines.join("\n")}</pre>`,
+      );
+      win.print();
+      win.close();
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
             Course Management
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Create and manage courses, assign lecturers, and configure
-            curriculum per department and level.
+            Create courses, assign lecturers, and configure curriculum per
+            department and level.
           </p>
         </div>
         {tab === "courses" && (
           <Button onClick={openNew} data-ocid="course-mgmt.new_course_button">
             <Plus size={16} className="mr-2" /> Add Course
+          </Button>
+        )}
+        {tab === "curriculum" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={printCurriculum}
+            data-ocid="course-mgmt.print_curriculum_button"
+          >
+            <Printer size={14} className="mr-2" /> Print Curriculum
           </Button>
         )}
       </div>
@@ -329,11 +364,7 @@ export function CourseManagement() {
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             data-ocid={`course-mgmt.tab.${t.key}`}
           >
             {t.icon} {t.label}
@@ -344,7 +375,6 @@ export function CourseManagement() {
       {/* ─── COURSE CATALOG TAB ─────────────────────────────────── */}
       {tab === "courses" && (
         <>
-          {/* Inline form */}
           {showForm && (
             <Card className="border-primary/30 bg-primary/5">
               <CardHeader>
@@ -367,7 +397,7 @@ export function CourseManagement() {
                       data-ocid="course-mgmt.code_input"
                     />
                   </div>
-                  <div className="col-span-2 md:col-span-2">
+                  <div className="col-span-2">
                     <Label>Course Title *</Label>
                     <Input
                       className="mt-1"
@@ -481,6 +511,23 @@ export function CourseManagement() {
                     />
                   </div>
                 </div>
+                <div className="flex items-center gap-3">
+                  <Label>Available This Semester</Label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({ ...form, available: !form.available })
+                    }
+                    className={`text-2xl ${form.available !== false ? "text-green-600" : "text-muted-foreground"}`}
+                    data-ocid="course-mgmt.available_toggle"
+                  >
+                    {form.available !== false ? (
+                      <ToggleRight size={28} />
+                    ) : (
+                      <ToggleLeft size={28} />
+                    )}
+                  </button>
+                </div>
                 {formError && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <AlertCircle size={14} /> {formError}
@@ -563,7 +610,6 @@ export function CourseManagement() {
             </select>
           </div>
 
-          {/* Course list */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
@@ -584,30 +630,24 @@ export function CourseManagement() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/40">
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                          Code
-                        </th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                          Title
-                        </th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                          Department
-                        </th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                          Level
-                        </th>
-                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">
-                          CU
-                        </th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                          Type
-                        </th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                          Lecturer
-                        </th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">
-                          Actions
-                        </th>
+                        {[
+                          "Code",
+                          "Title",
+                          "Department",
+                          "Level",
+                          "CU",
+                          "Type",
+                          "Lecturer",
+                          "Available",
+                          "Actions",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            className={`px-4 py-3 font-medium text-muted-foreground ${h === "CU" || h === "Actions" ? "text-center" : "text-left"}`}
+                          >
+                            {h}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -624,7 +664,7 @@ export function CourseManagement() {
                             <td className="px-4 py-3 font-mono font-medium text-foreground">
                               {c.code}
                             </td>
-                            <td className="px-4 py-3 text-foreground max-w-[200px]">
+                            <td className="px-4 py-3 text-foreground max-w-[180px]">
                               <p className="truncate">{c.title}</p>
                               {c.prerequisites && (
                                 <p className="text-xs text-muted-foreground">
@@ -657,8 +697,23 @@ export function CourseManagement() {
                                 </span>
                               )}
                             </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleAvailability(c.code)}
+                                className={`text-2xl ${c.available ? "text-green-600" : "text-muted-foreground"}`}
+                                data-ocid={`course-mgmt.toggle_available.${i + 1}`}
+                                aria-label={`Toggle availability for ${c.code}`}
+                              >
+                                {c.available ? (
+                                  <ToggleRight size={22} />
+                                ) : (
+                                  <ToggleLeft size={22} />
+                                )}
+                              </button>
+                            </td>
                             <td className="px-4 py-3">
-                              <div className="flex items-center gap-1 justify-end">
+                              <div className="flex items-center gap-1 justify-center">
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -748,7 +803,7 @@ export function CourseManagement() {
 
               <Separator />
 
-              {/* Credit load indicator */}
+              {/* Credit load bar */}
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">
                   Total Credit Load
@@ -770,7 +825,7 @@ export function CourseManagement() {
                 </div>
               </div>
 
-              {/* Current curriculum for selected scope */}
+              {/* Current curriculum */}
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">
                   Current Curriculum ({currCourses.length} courses)
@@ -846,7 +901,7 @@ export function CourseManagement() {
                 )}
               </div>
 
-              {/* Add courses to curriculum */}
+              {/* Add courses */}
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">
                   Add Courses from Catalog
@@ -894,25 +949,25 @@ export function CourseManagement() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Lecturer Assignment</CardTitle>
+              <CardTitle className="text-base">
+                Lecturer Assignment Matrix
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40">
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                        Course
-                      </th>
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                        Department
-                      </th>
-                      <th className="text-center px-4 py-3 font-medium text-muted-foreground">
-                        CU
-                      </th>
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                        Assigned Lecturer
-                      </th>
+                      {["Course", "Department", "CU", "Assigned Lecturer"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className={`px-4 py-3 font-medium text-muted-foreground ${h === "CU" ? "text-center" : "text-left"}`}
+                          >
+                            {h}
+                          </th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -971,34 +1026,35 @@ export function CourseManagement() {
             </CardContent>
           </Card>
 
-          {/* Assignment summary */}
           <div className="grid grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-4 pb-4 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {courses.length}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Total Courses
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4 pb-4 text-center">
-                <p className="text-2xl font-bold text-green-700">
-                  {courses.filter((c) => c.lecturerId).length}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">Assigned</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4 pb-4 text-center">
-                <p className="text-2xl font-bold text-amber-600">
-                  {courses.filter((c) => !c.lecturerId).length}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">Unassigned</p>
-              </CardContent>
-            </Card>
+            {[
+              {
+                label: "Total Courses",
+                value: courses.length,
+                cls: "text-foreground",
+              },
+              {
+                label: "Assigned",
+                value: courses.filter((c) => c.lecturerId).length,
+                cls: "text-green-700",
+              },
+              {
+                label: "Unassigned",
+                value: courses.filter((c) => !c.lecturerId).length,
+                cls: "text-amber-600",
+              },
+            ].map((stat) => (
+              <Card key={stat.label}>
+                <CardContent className="pt-4 pb-4 text-center">
+                  <p className={`text-2xl font-bold ${stat.cls}`}>
+                    {stat.value}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {stat.label}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       )}

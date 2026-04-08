@@ -3,13 +3,15 @@ import {
   Clock,
   DollarSign,
   FileText,
+  MessageSquare,
   PlusCircle,
+  Printer,
+  RefreshCw,
   Trash2,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -38,12 +40,12 @@ import { Textarea } from "../../components/ui/textarea";
 const LS_KEY = "unidigital_budget_requests";
 
 export type BudgetItemCategory =
-  | "salaries"
+  | "personnel"
+  | "overhead"
   | "equipment"
-  | "research"
-  | "consumables"
   | "travel"
-  | "other";
+  | "research"
+  | "others";
 
 export interface BudgetLineItem {
   id: string;
@@ -61,11 +63,18 @@ export interface BudgetRequest {
   submittedAt: string;
   items: BudgetLineItem[];
   totalEstimated: number;
-  status: "draft" | "submitted" | "finance_approved" | "approved" | "rejected";
+  status:
+    | "draft"
+    | "submitted"
+    | "finance_approved"
+    | "approved"
+    | "rejected"
+    | "revision_requested";
   financeComment?: string;
   adminComment?: string;
   approvedAmount?: number;
   actualSpend?: number;
+  revisionNote?: string;
 }
 
 function loadRequests(): BudgetRequest[] {
@@ -79,33 +88,55 @@ function saveRequests(data: BudgetRequest[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(data));
 }
 
-const categoryLabels: Record<BudgetItemCategory, string> = {
-  salaries: "Salaries & Allowances",
+export const categoryLabels: Record<BudgetItemCategory, string> = {
+  personnel: "Personnel & Salaries",
+  overhead: "Overhead & Running Costs",
   equipment: "Equipment & Machinery",
-  research: "Research & Development",
-  consumables: "Consumables & Supplies",
   travel: "Travel & Conferences",
-  other: "Other",
+  research: "Research & Development",
+  others: "Others",
 };
 
 const statusConfig: Record<
   BudgetRequest["status"],
-  { label: string; color: string }
+  { label: string; color: string; icon: React.ReactNode }
 > = {
-  draft: { label: "Draft", color: "bg-slate-100 text-slate-700" },
-  submitted: { label: "Submitted", color: "bg-blue-100 text-blue-700" },
+  draft: {
+    label: "Draft",
+    color: "bg-slate-100 text-slate-700",
+    icon: <FileText size={12} />,
+  },
+  submitted: {
+    label: "Submitted",
+    color: "bg-blue-100 text-blue-700",
+    icon: <Clock size={12} />,
+  },
   finance_approved: {
     label: "Finance Approved",
     color: "bg-cyan-100 text-cyan-700",
+    icon: <CheckCircle size={12} />,
   },
-  approved: { label: "Approved", color: "bg-green-100 text-green-700" },
-  rejected: { label: "Rejected", color: "bg-red-100 text-red-700" },
+  approved: {
+    label: "Approved",
+    color: "bg-green-100 text-green-700",
+    icon: <CheckCircle size={12} />,
+  },
+  rejected: {
+    label: "Rejected",
+    color: "bg-red-100 text-red-700",
+    icon: <XCircle size={12} />,
+  },
+  revision_requested: {
+    label: "Revision Requested",
+    color: "bg-amber-100 text-amber-700",
+    icon: <RefreshCw size={12} />,
+  },
 };
 
 function blankItem(): BudgetLineItem {
   return {
     id: `ITEM-${Date.now()}-${Math.random()}`,
-    category: "consumables",
+    category: "overhead",
     description: "",
     estimatedCost: 0,
     justification: "",
@@ -116,6 +147,7 @@ export function BudgetRequest() {
   const [requests, setRequests] = useState<BudgetRequest[]>(loadRequests);
   const [dialog, setDialog] = useState(false);
   const [viewId, setViewId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [session, setSession] = useState("2024/2025");
   const [items, setItems] = useState<BudgetLineItem[]>([blankItem()]);
 
@@ -124,14 +156,11 @@ export function BudgetRequest() {
   }, [requests]);
 
   const myDept = "Computer Science";
-
   const myRequests = requests.filter((r) => r.department === myDept);
 
   const addItem = () => setItems((prev) => [...prev, blankItem()]);
-
   const removeItem = (id: string) =>
     setItems((prev) => prev.filter((i) => i.id !== id));
-
   const updateItem = (
     id: string,
     field: keyof BudgetLineItem,
@@ -140,6 +169,20 @@ export function BudgetRequest() {
     setItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)),
     );
+  };
+
+  const openNew = () => {
+    setEditingId(null);
+    setItems([blankItem()]);
+    setSession("2024/2025");
+    setDialog(true);
+  };
+
+  const openRevise = (req: BudgetRequest) => {
+    setEditingId(req.id);
+    setItems(req.items.map((i) => ({ ...i })));
+    setSession(req.session);
+    setDialog(true);
   };
 
   const submitRequest = () => {
@@ -153,20 +196,96 @@ export function BudgetRequest() {
       return;
     }
     const total = validItems.reduce((s, i) => s + i.estimatedCost, 0);
-    const req: BudgetRequest = {
-      id: `BUD-${Date.now()}`,
-      department: myDept,
-      session,
-      submittedBy: "HOD (Acting)",
-      submittedAt: new Date().toISOString(),
-      items: validItems,
-      totalEstimated: total,
-      status: "submitted",
-    };
-    setRequests((prev) => [...prev, req]);
+
+    if (editingId) {
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === editingId
+            ? {
+                ...r,
+                items: validItems,
+                totalEstimated: total,
+                session,
+                status: "submitted",
+                revisionNote: undefined,
+                submittedAt: new Date().toISOString(),
+              }
+            : r,
+        ),
+      );
+      toast.success("Revised budget request re-submitted.");
+    } else {
+      const req: BudgetRequest = {
+        id: `BUD-${Date.now()}`,
+        department: myDept,
+        session,
+        submittedBy: "HOD (Acting)",
+        submittedAt: new Date().toISOString(),
+        items: validItems,
+        totalEstimated: total,
+        status: "submitted",
+      };
+      setRequests((prev) => [...prev, req]);
+      toast.success("Budget request submitted successfully.");
+    }
     setItems([blankItem()]);
     setDialog(false);
-    toast.success("Budget request submitted successfully.");
+    setEditingId(null);
+  };
+
+  const printBudget = (r: BudgetRequest) => {
+    const byCategory: Record<string, number> = {};
+    for (const item of r.items) {
+      byCategory[item.category] =
+        (byCategory[item.category] ?? 0) + item.estimatedCost;
+    }
+    const rows = r.items
+      .map(
+        (item, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${categoryLabels[item.category]}</td>
+        <td>${item.description}</td>
+        <td style="text-align:right">₦${item.estimatedCost.toLocaleString()}</td>
+        <td>${item.justification}</td>
+      </tr>`,
+      )
+      .join("");
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><title>Budget Request — ${r.id}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:36px;max-width:800px;margin:auto;font-size:13px}
+      h2,h3{text-align:center;margin:4px 0}
+      table{width:100%;border-collapse:collapse;margin-top:12px}
+      th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+      th{background:#f0f4f8;font-weight:bold}
+      tfoot td{font-weight:bold;background:#f0f4f8}
+      .meta{display:flex;gap:30px;margin:12px 0;font-size:12px}
+      .meta span{color:#555}
+      .footer{margin-top:40px;font-size:11px;text-align:center;color:#888}
+    </style></head><body>
+    <h2>FEDERAL UNIVERSITY OF EDUCATION KONTAGORA</h2>
+    <h3>DEPARTMENTAL BUDGET REQUEST</h3>
+    <div class="meta">
+      <div><span>Department:</span> <strong>${r.department}</strong></div>
+      <div><span>Session:</span> <strong>${r.session}</strong></div>
+      <div><span>Request ID:</span> <strong>${r.id}</strong></div>
+      <div><span>Submitted:</span> <strong>${new Date(r.submittedAt).toLocaleDateString()}</strong></div>
+      <div><span>Status:</span> <strong>${statusConfig[r.status].label}</strong></div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Category</th><th>Description</th><th>Estimated (₦)</th><th>Justification</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="3">TOTAL ESTIMATED</td><td style="text-align:right">₦${r.totalEstimated.toLocaleString()}</td><td></td></tr>
+      ${r.approvedAmount != null ? `<tr><td colspan="3">APPROVED AMOUNT</td><td style="text-align:right;color:green">₦${r.approvedAmount.toLocaleString()}</td><td></td></tr>` : ""}
+      </tfoot>
+    </table>
+    ${r.adminComment ? `<p style="margin-top:12px"><strong>Admin Comment:</strong> ${r.adminComment}</p>` : ""}
+    <div class="footer">FUEK MIS — Printed: ${new Date().toLocaleDateString()} | Page 1 of 1</div>
+    <script>window.onload=()=>window.print()</script>
+    </body></html>`);
+    win.document.close();
   };
 
   const viewed = viewId ? requests.find((r) => r.id === viewId) : null;
@@ -179,14 +298,16 @@ export function BudgetRequest() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Budget Requests</h1>
-          <p className="text-slate-500 text-sm">
+          <h1 className="text-2xl font-bold text-foreground">
+            Budget Requests
+          </h1>
+          <p className="text-muted-foreground text-sm">
             {myDept} — Annual Department Budget Planning
           </p>
         </div>
         <Button
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={() => setDialog(true)}
+          className="bg-primary hover:bg-primary/90"
+          onClick={openNew}
           data-ocid="budget.request.new"
         >
           <PlusCircle size={16} className="mr-2" /> New Budget Request
@@ -195,45 +316,38 @@ export function BudgetRequest() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <FileText size={20} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Total Requests</p>
-              <p className="text-2xl font-bold text-slate-800">
-                {myRequests.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-green-50 rounded-lg">
-              <CheckCircle size={20} className="text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Total Approved (₦)</p>
-              <p className="text-2xl font-bold text-slate-800">
-                {totalApproved.toLocaleString()}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <DollarSign size={20} className="text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Total Spent (₦)</p>
-              <p className="text-2xl font-bold text-slate-800">
-                {totalSpent.toLocaleString()}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          {
+            label: "Total Requests",
+            value: myRequests.length,
+            icon: <FileText size={20} className="text-blue-600" />,
+            bg: "bg-blue-50",
+          },
+          {
+            label: "Total Approved (₦)",
+            value: `₦${totalApproved.toLocaleString()}`,
+            icon: <CheckCircle size={20} className="text-green-600" />,
+            bg: "bg-green-50",
+          },
+          {
+            label: "Total Spent (₦)",
+            value: `₦${totalSpent.toLocaleString()}`,
+            icon: <DollarSign size={20} className="text-purple-600" />,
+            bg: "bg-purple-50",
+          },
+        ].map((card) => (
+          <Card key={card.label}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`p-2 ${card.bg} rounded-lg`}>{card.icon}</div>
+              <div>
+                <p className="text-sm text-muted-foreground">{card.label}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {card.value}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Requests Table */}
@@ -243,14 +357,14 @@ export function BudgetRequest() {
         </CardHeader>
         <CardContent className="p-0">
           {myRequests.length === 0 ? (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-muted-foreground">
               <FileText size={36} className="mx-auto mb-2 opacity-40" />
               <p>No budget requests yet. Submit your first request.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b">
+                <thead className="bg-muted/30 border-b">
                   <tr>
                     {[
                       "Request ID",
@@ -262,7 +376,7 @@ export function BudgetRequest() {
                     ].map((h) => (
                       <th
                         key={h}
-                        className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide"
+                        className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide"
                       >
                         {h}
                       </th>
@@ -275,10 +389,10 @@ export function BudgetRequest() {
                     return (
                       <tr
                         key={r.id}
-                        className="border-b last:border-0 hover:bg-slate-50"
+                        className="border-b last:border-0 hover:bg-muted/20"
                         data-ocid={`budget.request.row.${r.id}`}
                       >
-                        <td className="px-4 py-3 text-sm font-mono font-semibold text-blue-600">
+                        <td className="px-4 py-3 text-sm font-mono font-semibold text-primary">
                           {r.id}
                         </td>
                         <td className="px-4 py-3 text-sm">{r.session}</td>
@@ -294,19 +408,40 @@ export function BudgetRequest() {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`text-xs px-2 py-1 rounded-full font-medium ${cfg.color}`}
+                            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium w-fit ${cfg.color}`}
                           >
+                            {cfg.icon}
                             {cfg.label}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setViewId(r.id)}
-                          >
-                            View
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewId(r.id)}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => printBudget(r)}
+                              className="text-muted-foreground"
+                            >
+                              <Printer size={12} />
+                            </Button>
+                            {r.status === "revision_requested" && (
+                              <Button
+                                size="sm"
+                                className="bg-amber-500 hover:bg-amber-600 text-white text-xs"
+                                onClick={() => openRevise(r)}
+                                data-ocid={`budget.request.revise.${r.id}`}
+                              >
+                                <RefreshCw size={12} className="mr-1" /> Revise
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -318,11 +453,13 @@ export function BudgetRequest() {
         </CardContent>
       </Card>
 
-      {/* New Request Dialog */}
+      {/* New / Edit Request Dialog */}
       <Dialog open={dialog} onOpenChange={setDialog}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Budget Request</DialogTitle>
+            <DialogTitle>
+              {editingId ? "Revise Budget Request" : "New Budget Request"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -349,7 +486,7 @@ export function BudgetRequest() {
 
             <div className="border rounded-lg p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-semibold text-foreground">
                   Budget Line Items
                 </p>
                 <Button variant="outline" size="sm" onClick={addItem}>
@@ -359,16 +496,16 @@ export function BudgetRequest() {
               {items.map((item, idx) => (
                 <div
                   key={item.id}
-                  className="border rounded-md p-3 space-y-2 bg-slate-50"
+                  className="border rounded-md p-3 space-y-2 bg-muted/20"
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-slate-500">
+                    <p className="text-xs font-semibold text-muted-foreground">
                       Item {idx + 1}
                     </p>
                     {items.length > 1 && (
                       <button
                         onClick={() => removeItem(item.id)}
-                        className="text-red-400 hover:text-red-600"
+                        className="text-destructive hover:text-destructive/80"
                         type="button"
                       >
                         <Trash2 size={14} />
@@ -408,11 +545,11 @@ export function BudgetRequest() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Estimated Cost (₦)</Label>
+                      <Label className="text-xs">Requested Amount (₦)</Label>
                       <Input
                         type="number"
                         className="mt-1 h-8 text-xs"
-                        value={item.estimatedCost}
+                        value={item.estimatedCost || ""}
                         onChange={(e) =>
                           updateItem(
                             item.id,
@@ -426,7 +563,7 @@ export function BudgetRequest() {
                   <div>
                     <Label className="text-xs">Justification</Label>
                     <Textarea
-                      className="mt-1 text-xs min-h-[50px]"
+                      className="mt-1 text-xs min-h-[50px] resize-none"
                       value={item.justification}
                       onChange={(e) =>
                         updateItem(item.id, "justification", e.target.value)
@@ -436,9 +573,9 @@ export function BudgetRequest() {
                   </div>
                 </div>
               ))}
-              <div className="text-right text-sm font-semibold text-slate-700">
+              <div className="text-right text-sm font-semibold text-foreground">
                 Total Estimated:{" "}
-                <span className="text-blue-600">
+                <span className="text-primary">
                   ₦
                   {items
                     .reduce((s, i) => s + (i.estimatedCost || 0), 0)
@@ -452,11 +589,11 @@ export function BudgetRequest() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={submitRequest}
               data-ocid="budget.request.submit"
             >
-              Submit Request
+              {editingId ? "Re-Submit Revision" : "Submit Request"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -466,102 +603,115 @@ export function BudgetRequest() {
       <Dialog open={!!viewId} onOpenChange={(o) => !o && setViewId(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Budget Request Detail — {viewed?.id}</DialogTitle>
+            <DialogTitle>Budget Request — {viewed?.id}</DialogTitle>
           </DialogHeader>
           {viewed && (
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-slate-500">Department</p>
-                  <p className="font-medium">{viewed.department}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Session</p>
-                  <p className="font-medium">{viewed.session}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Status</p>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full font-medium ${statusConfig[viewed.status].color}`}
-                  >
-                    {statusConfig[viewed.status].label}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Submitted</p>
-                  <p className="font-medium">
-                    {new Date(viewed.submittedAt).toLocaleDateString()}
-                  </p>
-                </div>
+                {[
+                  { label: "Department", value: viewed.department },
+                  { label: "Session", value: viewed.session },
+                  {
+                    label: "Submitted",
+                    value: new Date(viewed.submittedAt).toLocaleDateString(),
+                  },
+                  {
+                    label: "Status",
+                    value: (
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${statusConfig[viewed.status].color}`}
+                      >
+                        {statusConfig[viewed.status].label}
+                      </span>
+                    ),
+                  },
+                ].map((f) => (
+                  <div key={f.label.toString()}>
+                    <p className="text-xs text-muted-foreground">{f.label}</p>
+                    <p className="font-medium">{f.value}</p>
+                  </div>
+                ))}
               </div>
-              {viewed.adminComment && (
+
+              {viewed.revisionNote && (
                 <div className="bg-amber-50 border border-amber-200 rounded p-3">
-                  <p className="text-xs font-semibold text-amber-700 mb-1">
-                    Admin Comment
+                  <p className="text-xs font-semibold text-amber-700 mb-1 flex items-center gap-1">
+                    <MessageSquare size={12} /> Revision Required
                   </p>
-                  <p className="text-amber-800">{viewed.adminComment}</p>
+                  <p className="text-amber-800 text-xs">
+                    {viewed.revisionNote}
+                  </p>
                 </div>
               )}
-              <div>
-                <p className="text-xs font-semibold text-slate-600 mb-2">
-                  Budget Line Items
-                </p>
-                <table className="w-full text-xs border rounded overflow-hidden">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      {[
-                        "Category",
-                        "Description",
-                        "Est. Cost (₦)",
-                        "Justification",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="px-3 py-2 text-left font-semibold text-slate-500"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {viewed.items.map((item) => (
-                      <tr key={item.id} className="border-t">
-                        <td className="px-3 py-2">
-                          {categoryLabels[item.category]}
-                        </td>
-                        <td className="px-3 py-2">{item.description}</td>
-                        <td className="px-3 py-2">
-                          ₦{item.estimatedCost.toLocaleString()}
-                        </td>
-                        <td className="px-3 py-2 text-slate-500">
-                          {item.justification}
-                        </td>
-                      </tr>
+              {viewed.adminComment && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                  <p className="text-xs font-semibold text-blue-700 mb-1">
+                    Admin Comment
+                  </p>
+                  <p className="text-blue-800 text-xs">{viewed.adminComment}</p>
+                </div>
+              )}
+
+              <table className="w-full text-xs border rounded overflow-hidden">
+                <thead className="bg-muted/30">
+                  <tr>
+                    {[
+                      "Category",
+                      "Description",
+                      "Requested (₦)",
+                      "Justification",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-3 py-2 text-left font-semibold text-muted-foreground"
+                      >
+                        {h}
+                      </th>
                     ))}
-                    <tr className="border-t bg-slate-50 font-semibold">
-                      <td colSpan={2} className="px-3 py-2 text-right">
-                        Total
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewed.items.map((item) => (
+                    <tr key={item.id} className="border-t">
+                      <td className="px-3 py-2">
+                        {categoryLabels[item.category]}
                       </td>
-                      <td className="px-3 py-2 text-blue-700">
-                        ₦{viewed.totalEstimated.toLocaleString()}
+                      <td className="px-3 py-2">{item.description}</td>
+                      <td className="px-3 py-2 font-mono">
+                        ₦{item.estimatedCost.toLocaleString()}
                       </td>
-                      <td />
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {item.justification}
+                      </td>
                     </tr>
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                  <tr className="border-t bg-muted/20 font-semibold">
+                    <td colSpan={2} className="px-3 py-2 text-right">
+                      Total
+                    </td>
+                    <td className="px-3 py-2 text-primary">
+                      ₦{viewed.totalEstimated.toLocaleString()}
+                    </td>
+                    <td />
+                  </tr>
+                </tbody>
+              </table>
+
               {viewed.approvedAmount != null && (
                 <div className="flex gap-4 bg-green-50 border border-green-200 rounded p-3">
                   <div>
-                    <p className="text-xs text-slate-500">Approved Amount</p>
+                    <p className="text-xs text-muted-foreground">
+                      Approved Amount
+                    </p>
                     <p className="font-semibold text-green-700">
                       ₦{viewed.approvedAmount.toLocaleString()}
                     </p>
                   </div>
                   {viewed.actualSpend != null && (
                     <div>
-                      <p className="text-xs text-slate-500">Actual Spent</p>
+                      <p className="text-xs text-muted-foreground">
+                        Actual Spent
+                      </p>
                       <p className="font-semibold text-purple-700">
                         ₦{viewed.actualSpend.toLocaleString()}
                       </p>
@@ -572,6 +722,11 @@ export function BudgetRequest() {
             </div>
           )}
           <DialogFooter>
+            {viewed && (
+              <Button variant="outline" onClick={() => printBudget(viewed)}>
+                <Printer size={14} className="mr-1" /> Print
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setViewId(null)}>
               Close
             </Button>
@@ -702,12 +857,17 @@ function ProcurementSection({
         </Button>
       </div>
       {items.length === 0 ? (
-        <p className="text-center text-slate-400 text-sm py-6">
+        <p className="text-center text-muted-foreground text-sm py-6">
           No procurement requests yet.
+          {approvedBudgets.length === 0 && (
+            <span className="block text-xs mt-1 text-muted-foreground">
+              Requires an approved budget request first.
+            </span>
+          )}
         </p>
       ) : (
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
+          <thead className="bg-muted/30 border-b">
             <tr>
               {[
                 "ID",
@@ -720,7 +880,7 @@ function ProcurementSection({
               ].map((h) => (
                 <th
                   key={h}
-                  className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase"
+                  className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase"
                 >
                   {h}
                 </th>
@@ -730,7 +890,7 @@ function ProcurementSection({
           <tbody>
             {items.map((p) => (
               <tr key={p.id} className="border-b last:border-0">
-                <td className="px-3 py-2 text-xs font-mono text-blue-600">
+                <td className="px-3 py-2 text-xs font-mono text-primary">
                   {p.id}
                 </td>
                 <td className="px-3 py-2">{p.itemDescription}</td>
@@ -746,7 +906,7 @@ function ProcurementSection({
                     {p.status}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-500">
+                <td className="px-3 py-2 text-xs text-muted-foreground">
                   {p.deliveryDate || "—"}
                 </td>
               </tr>
@@ -812,7 +972,7 @@ function ProcurementSection({
                 <Input
                   type="number"
                   className="mt-1"
-                  value={form.unitCost}
+                  value={form.unitCost || ""}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
@@ -843,9 +1003,9 @@ function ProcurementSection({
                 }
               />
             </div>
-            <p className="text-sm font-medium text-slate-700">
+            <p className="text-sm font-medium text-foreground">
               Total Cost:{" "}
-              <span className="text-blue-600">
+              <span className="text-primary">
                 ₦{(form.quantity * form.unitCost).toLocaleString()}
               </span>
             </p>
@@ -855,7 +1015,7 @@ function ProcurementSection({
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={submit}
               data-ocid="procurement.request.submit"
             >

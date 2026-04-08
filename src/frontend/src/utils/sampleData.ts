@@ -1074,7 +1074,14 @@ export interface AcademicCalendarEvent {
   title: string;
   date: string;
   endDate?: string;
-  type: "Holiday" | "Exam" | "Lecture" | "Deadline" | "Semester";
+  type:
+    | "Holiday"
+    | "Exam"
+    | "Lecture"
+    | "Deadline"
+    | "Semester"
+    | "Registration"
+    | "Event";
   description?: string;
   session?: string;
   published?: boolean;

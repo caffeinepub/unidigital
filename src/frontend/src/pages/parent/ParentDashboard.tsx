@@ -9,6 +9,7 @@ import {
   Link2,
   LogOut,
   Printer,
+  Search,
   Shield,
   TrendingUp,
   User,
@@ -132,7 +133,7 @@ function getWardDisciplinary(matric: string): DisciplinaryEntry[] {
   return all.filter((r) => r.studentMatric === matric);
 }
 
-function computeGPALocal(results: Result[]): number {
+function computeGPA(results: Result[]): number {
   if (!results.length) return 0;
   const total = results.reduce((s, r) => s + r.gradePoint, 0);
   return Math.round((total / results.length) * 100) / 100;
@@ -146,7 +147,7 @@ function getWardTimetable(
     {
       day: "Monday",
       time: "8:00 - 9:00",
-      course: `${dept}101 Introduction to ${dept}`,
+      course: `${dept}101 Introduction`,
       venue: "LT1",
     },
     {
@@ -182,92 +183,116 @@ function getWardTimetable(
   ];
 }
 
+// Alert thresholds
+const LOW_ATTENDANCE_THRESHOLD = 75;
+const POOR_GRADE_CODES = ["F", "D"];
+
+interface WardData {
+  student: StudentRecord;
+  results: Result[];
+  invoices: FeeInvoice[];
+  attendance: CourseAttendance[];
+  disciplinary: DisciplinaryEntry[];
+}
+
 const PARENT_ID = "parent_portal_user";
 type ParentPage = "dashboard" | "ward" | "link-ward" | "announcements";
 
 export function ParentDashboard() {
   const [linkedWards, setLinkedWards] = useState<string[]>([]);
-  const [selectedWard, setSelectedWard] = useState<StudentRecord | null>(null);
-  const [wardResults, setWardResults] = useState<Result[]>([]);
-  const [wardInvoices, setWardInvoices] = useState<FeeInvoice[]>([]);
-  const [wardAttendance, setWardAttendance] = useState<CourseAttendance[]>([]);
-  const [wardDisciplinary, setWardDisciplinary] = useState<DisciplinaryEntry[]>(
-    [],
-  );
+  const [wardsData, setWardsData] = useState<Record<string, WardData>>({});
+  const [activeWardMatric, setActiveWardMatric] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Announcement[]>([]);
   const [linkInput, setLinkInput] = useState("");
   const [linkError, setLinkError] = useState("");
   const [activePage, setActivePage] = useState<ParentPage>("dashboard");
   const printRef = useRef<HTMLDivElement>(null);
 
-  const allStudents = getLocalStudents();
-  const allResults = getLocalResults();
-  const allInvoices: FeeInvoice[] = JSON.parse(
-    localStorage.getItem("unidigital_invoices") || "[]",
-  );
-
-  const loadWardData = (student: StudentRecord) => {
-    setSelectedWard(student);
-    setWardResults(
-      allResults.filter((r) => r.studentMatric === student.matricNumber),
-    );
-    setWardInvoices(
-      allInvoices.filter((inv) => inv.studentMatric === student.matricNumber),
-    );
-    setWardAttendance(computeWardAttendance(student.matricNumber));
-    setWardDisciplinary(getWardDisciplinary(student.matricNumber));
-  };
-
   useEffect(() => {
-    const students = getLocalStudents();
+    function loadWardData(student: StudentRecord): WardData {
+      const invoices: FeeInvoice[] = JSON.parse(
+        localStorage.getItem("unidigital_invoices") || "[]",
+      );
+      return {
+        student,
+        results: getLocalResults().filter(
+          (r) => r.studentMatric === student.matricNumber,
+        ),
+        invoices: invoices.filter(
+          (inv) => inv.studentMatric === student.matricNumber,
+        ),
+        attendance: computeWardAttendance(student.matricNumber),
+        disciplinary: getWardDisciplinary(student.matricNumber),
+      };
+    }
+
+    const allStudents = getLocalStudents();
     const wards = getLinkedWards(PARENT_ID);
     setLinkedWards(wards);
     if (wards.length > 0) {
-      const student = students.find((s) => s.matricNumber === wards[0]);
-      if (student) {
-        const invoices: FeeInvoice[] = JSON.parse(
-          localStorage.getItem("unidigital_invoices") || "[]",
-        );
-        setSelectedWard(student);
-        setWardResults(
-          getLocalResults().filter(
-            (r) => r.studentMatric === student.matricNumber,
-          ),
-        );
-        setWardInvoices(
-          invoices.filter((inv) => inv.studentMatric === student.matricNumber),
-        );
-        setWardAttendance(computeWardAttendance(student.matricNumber));
-        setWardDisciplinary(getWardDisciplinary(student.matricNumber));
+      const dataMap: Record<string, WardData> = {};
+      for (const matric of wards) {
+        const student = allStudents.find((s) => s.matricNumber === matric);
+        if (student) dataMap[matric] = loadWardData(student);
       }
+      setWardsData(dataMap);
+      setActiveWardMatric(wards[0]);
     }
     setNotifications(getLocalAnnouncements().filter((a) => a.target === "all"));
   }, []);
 
   const handleLinkWard = () => {
     setLinkError("");
-    const matric = linkInput.trim().toUpperCase();
-    if (!matric) {
-      setLinkError("Please enter a matric number.");
+    const input = linkInput.trim();
+    if (!input) {
+      setLinkError("Please enter a matric number or student name.");
       return;
     }
-    if (linkedWards.includes(matric)) {
+    if (linkedWards.includes(input.toUpperCase())) {
       setLinkError("This ward is already linked.");
       return;
     }
-    const student = allStudents.find((s) => s.matricNumber === matric);
+
+    // Search by matric number OR name
+    const allStudentsNow = getLocalStudents();
+    const student =
+      allStudentsNow.find((s) => s.matricNumber === input.toUpperCase()) ||
+      allStudentsNow.find((s) =>
+        s.name.toLowerCase().includes(input.toLowerCase()),
+      );
+
     if (!student) {
       setLinkError(
-        "No student found with this matric number. Please check and try again.",
+        "No student found with this matric number or name. Please check and try again.",
       );
       return;
     }
-    addWardLink(PARENT_ID, matric);
-    const updated = [...linkedWards, matric];
+    if (linkedWards.includes(student.matricNumber)) {
+      setLinkError("This ward is already linked.");
+      return;
+    }
+
+    addWardLink(PARENT_ID, student.matricNumber);
+    const updated = [...linkedWards, student.matricNumber];
     setLinkedWards(updated);
+    const invoices: FeeInvoice[] = JSON.parse(
+      localStorage.getItem("unidigital_invoices") || "[]",
+    );
+    const newWardData: WardData = {
+      student,
+      results: getLocalResults().filter(
+        (r) => r.studentMatric === student.matricNumber,
+      ),
+      invoices: invoices.filter(
+        (inv) => inv.studentMatric === student.matricNumber,
+      ),
+      attendance: computeWardAttendance(student.matricNumber),
+      disciplinary: getWardDisciplinary(student.matricNumber),
+    };
+    setWardsData((prev) => ({ ...prev, [student.matricNumber]: newWardData }));
+    if (!activeWardMatric) setActiveWardMatric(student.matricNumber);
     setLinkInput("");
     toast.success(`Ward ${student.name} linked successfully`);
-    loadWardData(student);
     setActivePage("dashboard");
   };
 
@@ -275,30 +300,48 @@ export function ParentDashboard() {
     removeWardLink(PARENT_ID, matric);
     const updated = linkedWards.filter((w) => w !== matric);
     setLinkedWards(updated);
-    if (selectedWard?.matricNumber === matric) {
-      setSelectedWard(null);
-      setWardResults([]);
-      setWardInvoices([]);
+    setWardsData((prev) => {
+      const copy = { ...prev };
+      delete copy[matric];
+      return copy;
+    });
+    if (activeWardMatric === matric) {
+      setActiveWardMatric(updated[0] ?? null);
     }
     toast.success("Ward unlinked");
   };
 
   const handlePrint = () => window.print();
 
-  const cgpa = computeGPALocal(wardResults);
-  const totalFees = wardInvoices.reduce((s, i) => s + i.amount, 0);
-  const paidFees = wardInvoices.reduce((s, i) => s + i.paid, 0);
+  const activeWard = activeWardMatric ? wardsData[activeWardMatric] : null;
+  const cgpa = activeWard ? computeGPA(activeWard.results) : 0;
+  const totalFees = activeWard?.invoices.reduce((s, i) => s + i.amount, 0) ?? 0;
+  const paidFees = activeWard?.invoices.reduce((s, i) => s + i.paid, 0) ?? 0;
   const outstanding = totalFees - paidFees;
-  const avgAttendance = wardAttendance.length
+  const avgAttendance = activeWard?.attendance.length
     ? Math.round(
-        (wardAttendance.reduce(
+        (activeWard.attendance.reduce(
           (s, a) => s + (a.total > 0 ? a.present / a.total : 0),
           0,
         ) /
-          wardAttendance.length) *
+          activeWard.attendance.length) *
           100,
       )
     : 0;
+
+  // Alert counts for badge
+  const lowAttendanceCourses = (activeWard?.attendance ?? []).filter(
+    (a) =>
+      a.total > 0 && (a.present / a.total) * 100 < LOW_ATTENDANCE_THRESHOLD,
+  );
+  const poorGradeResults = (activeWard?.results ?? []).filter((r) =>
+    POOR_GRADE_CODES.includes(r.grade),
+  );
+  const alertCount =
+    lowAttendanceCourses.length +
+    poorGradeResults.length +
+    (outstanding > 0 ? 1 : 0) +
+    (activeWard?.disciplinary.length ?? 0);
 
   const navItems: {
     key: ParentPage;
@@ -312,17 +355,19 @@ export function ParentDashboard() {
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-muted/20">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex-shrink-0 flex-col hidden md:flex">
-        <div className="p-5 border-b border-slate-700">
+      <aside className="w-64 bg-card border-r border-border flex-shrink-0 flex-col hidden md:flex">
+        <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
               <Shield size={20} />
             </div>
             <div>
-              <p className="font-semibold text-sm">Parent Portal</p>
-              <p className="text-xs text-slate-400">UniDigital</p>
+              <p className="font-semibold text-sm text-foreground">
+                Parent Portal
+              </p>
+              <p className="text-xs text-muted-foreground">UniDigital</p>
             </div>
           </div>
         </div>
@@ -335,49 +380,76 @@ export function ParentDashboard() {
               data-ocid={`parent-sidebar.nav.${key}`}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 activePage === key
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <Icon size={16} />
               {label}
+              {key === "dashboard" && alertCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {alertCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>
+
+        {/* Ward switcher */}
         {linkedWards.length > 0 && (
-          <div className="p-3 border-t border-slate-700">
-            <p className="text-xs text-slate-400 mb-2 px-1">Linked Wards</p>
+          <div className="p-3 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2 px-1 font-medium">
+              Linked Wards
+            </p>
             {linkedWards.map((matric) => {
-              const student = allStudents.find(
-                (s) => s.matricNumber === matric,
+              const data = wardsData[matric];
+              const wardCgpa = data ? computeGPA(data.results) : 0;
+              const wardInvoices = data?.invoices ?? [];
+              const wardOutstanding = wardInvoices.reduce(
+                (s, i) => s + i.amount - i.paid,
+                0,
               );
               return (
                 <button
                   key={matric}
                   type="button"
                   onClick={() => {
-                    if (student) {
-                      loadWardData(student);
-                      setActivePage("dashboard");
-                    }
+                    setActiveWardMatric(matric);
+                    setActivePage("dashboard");
                   }}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
-                    selectedWard?.matricNumber === matric
-                      ? "bg-slate-700 text-white"
-                      : "text-slate-400 hover:bg-slate-800"
+                    activeWardMatric === matric
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
                   <GraduationCap size={14} />
-                  <span className="truncate">{student?.name ?? matric}</span>
+                  <span className="truncate flex-1">
+                    {data?.student.name ?? matric}
+                  </span>
+                  {wardOutstanding > 0 && (
+                    <span
+                      className="w-2 h-2 rounded-full bg-red-500 shrink-0"
+                      title="Overdue fees"
+                    />
+                  )}
+                  {wardCgpa > 0 && (
+                    <span
+                      className={`text-xs font-semibold ${wardCgpa >= 3.5 ? "text-green-600" : wardCgpa < 2.0 ? "text-red-600" : "text-foreground"}`}
+                    >
+                      {wardCgpa.toFixed(1)}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         )}
-        <div className="p-3 border-t border-slate-700">
+
+        <div className="p-3 border-t border-border">
           <button
             type="button"
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted"
           >
             <LogOut size={16} />
             Sign Out
@@ -388,29 +460,37 @@ export function ParentDashboard() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-800">
+            <h1 className="text-xl font-bold text-foreground">
               {activePage === "dashboard" && "Parent Dashboard"}
               {activePage === "ward" && "Ward Profile"}
               {activePage === "link-ward" && "Link a Ward"}
               {activePage === "announcements" && "Announcements"}
             </h1>
-            {selectedWard &&
+            {activeWard &&
               activePage !== "link-ward" &&
               activePage !== "announcements" && (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Monitoring:{" "}
-                  <span className="font-medium text-blue-600">
-                    {selectedWard.name}
+                  <span className="font-medium text-primary">
+                    {activeWard.student.name}
                   </span>
                 </p>
               )}
           </div>
-          <Badge className="bg-blue-100 text-blue-700 border-0">
-            {linkedWards.length} Ward{linkedWards.length !== 1 ? "s" : ""}{" "}
-            Linked
-          </Badge>
+          <div className="flex items-center gap-2">
+            {alertCount > 0 && (
+              <Badge className="bg-red-100 text-red-700 border-0 flex items-center gap-1">
+                <AlertTriangle size={12} /> {alertCount} Alert
+                {alertCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            <Badge className="bg-primary/10 text-primary border-0">
+              {linkedWards.length} Ward{linkedWards.length !== 1 ? "s" : ""}{" "}
+              Linked
+            </Badge>
+          </div>
         </header>
 
         <main className="flex-1 p-6 overflow-auto">
@@ -420,12 +500,15 @@ export function ParentDashboard() {
               {linkedWards.length === 0 ? (
                 <Card data-ocid="parent-dashboard.empty_state">
                   <CardContent className="p-12 text-center">
-                    <Link2 size={48} className="mx-auto mb-4 text-slate-300" />
-                    <h2 className="text-lg font-semibold text-slate-700 mb-2">
+                    <Link2
+                      size={48}
+                      className="mx-auto mb-4 text-muted-foreground/30"
+                    />
+                    <h2 className="text-lg font-semibold text-foreground mb-2">
                       No Ward Linked Yet
                     </h2>
-                    <p className="text-slate-500 text-sm mb-4">
-                      Link your ward using their matric number to start
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Link your ward using their matric number or name to start
                       monitoring their academic progress.
                     </p>
                     <Button
@@ -437,22 +520,109 @@ export function ParentDashboard() {
                     </Button>
                   </CardContent>
                 </Card>
-              ) : (
+              ) : activeWard ? (
                 <>
+                  {/* Multi-ward tab switcher */}
+                  {linkedWards.length > 1 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {linkedWards.map((matric) => {
+                        const data = wardsData[matric];
+                        return (
+                          <button
+                            key={matric}
+                            type="button"
+                            onClick={() => setActiveWardMatric(matric)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm border transition-colors ${
+                              activeWardMatric === matric
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card text-foreground hover:bg-muted"
+                            }`}
+                            data-ocid={`parent-dashboard.ward-tab.${matric}`}
+                          >
+                            <GraduationCap size={14} />
+                            {data?.student.name ?? matric}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Alert banner */}
+                  {alertCount > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <p className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                        <AlertTriangle size={16} className="text-amber-600" />
+                        {alertCount} issue{alertCount !== 1 ? "s" : ""} require
+                        attention for {activeWard.student.name}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {outstanding > 0 && (
+                          <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                            Overdue Fees: ₦{outstanding.toLocaleString()}
+                          </span>
+                        )}
+                        {lowAttendanceCourses.map((a) => (
+                          <span
+                            key={a.courseCode}
+                            className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium"
+                          >
+                            Low attendance: {a.courseCode} (
+                            {Math.round((a.present / a.total) * 100)}%)
+                          </span>
+                        ))}
+                        {poorGradeResults.map((r) => (
+                          <span
+                            key={r.id}
+                            className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium"
+                          >
+                            Poor grade: {r.courseCode} ({r.grade})
+                          </span>
+                        ))}
+                        {activeWard.disciplinary.length > 0 && (
+                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
+                            {activeWard.disciplinary.length} disciplinary notice
+                            {activeWard.disciplinary.length !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* KPI Cards */}
                   <div
                     className="grid grid-cols-2 lg:grid-cols-4 gap-4"
                     data-ocid="parent-dashboard.kpi_cards"
                   >
-                    <Card className="bg-blue-50 border-blue-100">
+                    <Card
+                      className={
+                        cgpa >= 3.5
+                          ? "bg-green-50 border-green-100"
+                          : cgpa < 2.0
+                            ? "bg-red-50 border-red-100"
+                            : "bg-blue-50 border-blue-100"
+                      }
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                          <TrendingUp size={20} className="text-blue-600" />
+                          <TrendingUp
+                            size={20}
+                            className={
+                              cgpa >= 3.5
+                                ? "text-green-600"
+                                : cgpa < 2.0
+                                  ? "text-red-500"
+                                  : "text-blue-600"
+                            }
+                          />
                           <div>
-                            <p className="text-xs text-blue-600 font-medium">
+                            <p
+                              className={`text-xs font-medium ${cgpa >= 3.5 ? "text-green-600" : cgpa < 2.0 ? "text-red-600" : "text-blue-600"}`}
+                            >
                               CGPA
                             </p>
-                            <p className="text-2xl font-bold text-blue-800">
+                            <p
+                              className={`text-2xl font-bold ${cgpa >= 3.5 ? "text-green-800" : cgpa < 2.0 ? "text-red-800" : "text-blue-800"}`}
+                            >
                               {cgpa.toFixed(2)}
                             </p>
                           </div>
@@ -460,7 +630,11 @@ export function ParentDashboard() {
                       </CardContent>
                     </Card>
                     <Card
-                      className={`border-0 ${outstanding > 0 ? "bg-red-50" : "bg-green-50"}`}
+                      className={
+                        outstanding > 0
+                          ? "bg-red-50 border-red-100"
+                          : "bg-green-50 border-green-100"
+                      }
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
@@ -484,18 +658,32 @@ export function ParentDashboard() {
                         </div>
                       </CardContent>
                     </Card>
-                    <Card className="bg-purple-50 border-purple-100">
+                    <Card
+                      className={
+                        avgAttendance < LOW_ATTENDANCE_THRESHOLD
+                          ? "bg-orange-50 border-orange-100"
+                          : "bg-purple-50 border-purple-100"
+                      }
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <ClipboardList
                             size={20}
-                            className="text-purple-600"
+                            className={
+                              avgAttendance < LOW_ATTENDANCE_THRESHOLD
+                                ? "text-orange-500"
+                                : "text-purple-600"
+                            }
                           />
                           <div>
-                            <p className="text-xs text-purple-600 font-medium">
+                            <p
+                              className={`text-xs font-medium ${avgAttendance < LOW_ATTENDANCE_THRESHOLD ? "text-orange-600" : "text-purple-600"}`}
+                            >
                               Attendance
                             </p>
-                            <p className="text-2xl font-bold text-purple-800">
+                            <p
+                              className={`text-2xl font-bold ${avgAttendance < LOW_ATTENDANCE_THRESHOLD ? "text-orange-800" : "text-purple-800"}`}
+                            >
                               {avgAttendance}%
                             </p>
                           </div>
@@ -503,28 +691,32 @@ export function ParentDashboard() {
                       </CardContent>
                     </Card>
                     <Card
-                      className={`border-0 ${wardDisciplinary.length > 0 ? "bg-orange-50" : "bg-slate-50"}`}
+                      className={
+                        activeWard.disciplinary.length > 0
+                          ? "bg-orange-50 border-orange-100"
+                          : "bg-muted/30"
+                      }
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <AlertTriangle
                             size={20}
                             className={
-                              wardDisciplinary.length > 0
+                              activeWard.disciplinary.length > 0
                                 ? "text-orange-500"
-                                : "text-slate-400"
+                                : "text-muted-foreground"
                             }
                           />
                           <div>
                             <p
-                              className={`text-xs font-medium ${wardDisciplinary.length > 0 ? "text-orange-600" : "text-slate-500"}`}
+                              className={`text-xs font-medium ${activeWard.disciplinary.length > 0 ? "text-orange-600" : "text-muted-foreground"}`}
                             >
                               Notices
                             </p>
                             <p
-                              className={`text-2xl font-bold ${wardDisciplinary.length > 0 ? "text-orange-800" : "text-slate-700"}`}
+                              className={`text-2xl font-bold ${activeWard.disciplinary.length > 0 ? "text-orange-800" : "text-foreground"}`}
                             >
-                              {wardDisciplinary.length}
+                              {activeWard.disciplinary.length}
                             </p>
                           </div>
                         </div>
@@ -532,436 +724,461 @@ export function ParentDashboard() {
                     </Card>
                   </div>
 
-                  {selectedWard && (
-                    <Tabs defaultValue="results">
-                      <TabsList>
-                        <TabsTrigger
-                          value="results"
-                          data-ocid="parent-dashboard.tab_results"
-                        >
-                          Results
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="timetable"
-                          data-ocid="parent-dashboard.tab_timetable"
-                        >
-                          Timetable
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="fees"
-                          data-ocid="parent-dashboard.tab_fees"
-                        >
-                          Fees
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="attendance"
-                          data-ocid="parent-dashboard.tab_attendance"
-                        >
-                          Attendance
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="disciplinary"
-                          data-ocid="parent-dashboard.tab_disciplinary"
-                        >
-                          Notices
-                          {wardDisciplinary.length > 0 && (
-                            <span className="ml-1 bg-orange-500 text-white rounded-full px-1.5 text-xs">
-                              {wardDisciplinary.length}
-                            </span>
-                          )}
-                        </TabsTrigger>
-                      </TabsList>
+                  {/* Detail tabs */}
+                  <Tabs defaultValue="results">
+                    <TabsList>
+                      <TabsTrigger
+                        value="results"
+                        data-ocid="parent-dashboard.tab_results"
+                      >
+                        Results
+                        {poorGradeResults.length > 0 && (
+                          <span className="ml-1 bg-red-500 text-white rounded-full px-1.5 text-xs">
+                            {poorGradeResults.length}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="fees"
+                        data-ocid="parent-dashboard.tab_fees"
+                      >
+                        Fees
+                        {outstanding > 0 && (
+                          <span className="ml-1 bg-red-500 text-white rounded-full px-1.5 text-xs">
+                            !
+                          </span>
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="attendance"
+                        data-ocid="parent-dashboard.tab_attendance"
+                      >
+                        Attendance
+                        {lowAttendanceCourses.length > 0 && (
+                          <span className="ml-1 bg-orange-500 text-white rounded-full px-1.5 text-xs">
+                            {lowAttendanceCourses.length}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="timetable"
+                        data-ocid="parent-dashboard.tab_timetable"
+                      >
+                        Timetable
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="disciplinary"
+                        data-ocid="parent-dashboard.tab_disciplinary"
+                      >
+                        Notices
+                        {activeWard.disciplinary.length > 0 && (
+                          <span className="ml-1 bg-orange-500 text-white rounded-full px-1.5 text-xs">
+                            {activeWard.disciplinary.length}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
 
-                      {/* Results Tab */}
-                      <TabsContent value="results">
-                        <Card>
-                          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                            <CardTitle className="text-base">
-                              Latest Results
-                            </CardTitle>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              type="button"
-                              onClick={handlePrint}
-                              data-ocid="parent-dashboard.print_record"
-                            >
-                              <Printer size={14} className="mr-1" /> Print
-                              Record
-                            </Button>
-                          </CardHeader>
-                          <CardContent>
-                            {wardResults.length === 0 ? (
-                              <p className="text-sm text-slate-400 text-center py-4">
-                                No results published yet.
-                              </p>
-                            ) : (
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="border-b">
-                                      <th className="text-left py-2 text-slate-500 font-medium">
-                                        Course
-                                      </th>
-                                      <th className="text-left py-2 text-slate-500 font-medium">
-                                        Semester
-                                      </th>
-                                      <th className="text-right py-2 text-slate-500 font-medium">
-                                        Score
-                                      </th>
-                                      <th className="text-right py-2 text-slate-500 font-medium">
-                                        Grade
-                                      </th>
-                                      <th className="text-right py-2 text-slate-500 font-medium">
-                                        GP
-                                      </th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {wardResults.map((r) => (
-                                      <tr
-                                        key={r.id}
-                                        className="border-b last:border-0"
-                                      >
-                                        <td className="py-2 font-medium text-slate-800">
-                                          {r.courseCode}
-                                        </td>
-                                        <td className="py-2 text-slate-500">
-                                          {r.semester}
-                                        </td>
-                                        <td className="py-2 text-right">
-                                          {r.score}
-                                        </td>
-                                        <td className="py-2 text-right">
-                                          <Badge
-                                            className={`text-xs border-0 ${
-                                              r.grade === "A"
-                                                ? "bg-green-100 text-green-700"
-                                                : r.grade === "F"
-                                                  ? "bg-red-100 text-red-700"
-                                                  : "bg-blue-100 text-blue-700"
-                                            }`}
-                                          >
-                                            {r.grade}
-                                          </Badge>
-                                        </td>
-                                        <td className="py-2 text-right text-slate-600">
-                                          {r.gradePoint}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                                <div className="mt-3 pt-3 border-t flex justify-between text-sm">
-                                  <span className="text-slate-500">
-                                    Cumulative GPA
-                                  </span>
-                                  <span className="font-bold text-blue-700">
-                                    {cgpa.toFixed(2)}/5.00
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
-
-                      {/* Timetable Tab */}
-                      <TabsContent value="timetable">
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-base">
-                              Weekly Timetable
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
+                    {/* Results Tab */}
+                    <TabsContent value="results">
+                      <Card>
+                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                          <CardTitle className="text-base">
+                            Latest Results
+                          </CardTitle>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            onClick={handlePrint}
+                            data-ocid="parent-dashboard.print_record"
+                          >
+                            <Printer size={14} className="mr-1" /> Print Record
+                          </Button>
+                        </CardHeader>
+                        <CardContent>
+                          {activeWard.results.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              No results published yet.
+                            </p>
+                          ) : (
                             <div className="overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="border-b">
-                                    <th className="text-left py-2 text-slate-500 font-medium">
-                                      Day
-                                    </th>
-                                    <th className="text-left py-2 text-slate-500 font-medium">
-                                      Time
-                                    </th>
-                                    <th className="text-left py-2 text-slate-500 font-medium">
-                                      Course
-                                    </th>
-                                    <th className="text-left py-2 text-slate-500 font-medium">
-                                      Venue
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {getWardTimetable(selectedWard).map(
-                                    (slot, i) => (
-                                      <tr
-                                        key={`${slot.day}-${slot.time}-${i}`}
-                                        className="border-b last:border-0"
+                                    {[
+                                      "Course",
+                                      "Semester",
+                                      "Score",
+                                      "Grade",
+                                      "GP",
+                                    ].map((h) => (
+                                      <th
+                                        key={h}
+                                        className="py-2 text-left text-muted-foreground font-medium"
                                       >
-                                        <td className="py-2 font-medium text-slate-700">
-                                          {slot.day}
-                                        </td>
-                                        <td className="py-2 text-slate-500">
-                                          {slot.time}
-                                        </td>
-                                        <td className="py-2 text-slate-800">
-                                          {slot.course}
-                                        </td>
-                                        <td className="py-2 text-slate-500">
-                                          {slot.venue}
-                                        </td>
-                                      </tr>
-                                    ),
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
-
-                      {/* Fees Tab */}
-                      <TabsContent value="fees">
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-base">
-                              Fee Payment Status
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="grid grid-cols-3 gap-3 mb-4">
-                              <div className="bg-slate-50 rounded-lg p-3 text-center">
-                                <p className="text-xs text-slate-500">
-                                  Total Billed
-                                </p>
-                                <p className="font-bold text-slate-800">
-                                  ₦{totalFees.toLocaleString()}
-                                </p>
-                              </div>
-                              <div className="bg-green-50 rounded-lg p-3 text-center">
-                                <p className="text-xs text-green-600">Paid</p>
-                                <p className="font-bold text-green-700">
-                                  ₦{paidFees.toLocaleString()}
-                                </p>
-                              </div>
-                              <div
-                                className={`${outstanding > 0 ? "bg-red-50" : "bg-green-50"} rounded-lg p-3 text-center`}
-                              >
-                                <p
-                                  className={`text-xs ${outstanding > 0 ? "text-red-600" : "text-green-600"}`}
-                                >
-                                  Outstanding
-                                </p>
-                                <p
-                                  className={`font-bold ${outstanding > 0 ? "text-red-700" : "text-green-700"}`}
-                                >
-                                  ₦{outstanding.toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                            {wardInvoices.length === 0 ? (
-                              <p className="text-sm text-slate-400 text-center py-4">
-                                No invoices found.
-                              </p>
-                            ) : (
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b">
-                                    <th className="text-left py-2 text-slate-500 font-medium">
-                                      Description
-                                    </th>
-                                    <th className="text-left py-2 text-slate-500 font-medium">
-                                      Session
-                                    </th>
-                                    <th className="text-right py-2 text-slate-500 font-medium">
-                                      Amount
-                                    </th>
-                                    <th className="text-right py-2 text-slate-500 font-medium">
-                                      Status
-                                    </th>
+                                        {h}
+                                      </th>
+                                    ))}
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {wardInvoices.map((inv) => (
+                                  {activeWard.results.map((r) => (
                                     <tr
-                                      key={inv.id}
+                                      key={r.id}
                                       className="border-b last:border-0"
                                     >
-                                      <td className="py-2 text-slate-800">
-                                        {inv.description}
+                                      <td className="py-2 font-medium text-foreground">
+                                        {r.courseCode}
                                       </td>
-                                      <td className="py-2 text-slate-500">
-                                        {inv.session}
-                                      </td>
-                                      <td className="py-2 text-right">
-                                        ₦{inv.amount.toLocaleString()}
+                                      <td className="py-2 text-muted-foreground">
+                                        {r.semester}
                                       </td>
                                       <td className="py-2 text-right">
-                                        {inv.paid >= inv.amount ? (
-                                          <Badge className="bg-green-100 text-green-700 border-0 text-xs">
-                                            Paid
-                                          </Badge>
-                                        ) : inv.paid > 0 ? (
-                                          <Badge className="bg-yellow-100 text-yellow-700 border-0 text-xs">
-                                            Partial
-                                          </Badge>
-                                        ) : (
-                                          <Badge className="bg-red-100 text-red-700 border-0 text-xs">
-                                            Unpaid
-                                          </Badge>
-                                        )}
+                                        {r.score}
+                                      </td>
+                                      <td className="py-2 text-right">
+                                        <Badge
+                                          className={`text-xs border-0 ${
+                                            r.grade === "A"
+                                              ? "bg-green-100 text-green-700"
+                                              : r.grade === "F"
+                                                ? "bg-red-100 text-red-700"
+                                                : r.grade === "D"
+                                                  ? "bg-orange-100 text-orange-700"
+                                                  : "bg-blue-100 text-blue-700"
+                                          }`}
+                                        >
+                                          {r.grade}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-2 text-right text-muted-foreground">
+                                        {r.gradePoint}
                                       </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
+                              <div className="mt-3 pt-3 border-t flex justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  Cumulative GPA
+                                </span>
+                                <span className="font-bold text-primary">
+                                  {cgpa.toFixed(2)}/5.00
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
 
-                      {/* Attendance Tab */}
-                      <TabsContent value="attendance">
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-base">
-                              Attendance by Course
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            {wardAttendance.length === 0 ? (
-                              <div className="space-y-2">
-                                {[
-                                  "Mathematics",
-                                  "Physics",
-                                  "Chemistry",
-                                  "Biology",
-                                  "GST",
-                                ].map((sub, i) => (
+                    {/* Fees Tab */}
+                    <TabsContent value="fees">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">
+                            Fee Payment Status
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="bg-muted/30 rounded-lg p-3 text-center">
+                              <p className="text-xs text-muted-foreground">
+                                Total Billed
+                              </p>
+                              <p className="font-bold text-foreground">
+                                ₦{totalFees.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="bg-green-50 rounded-lg p-3 text-center">
+                              <p className="text-xs text-green-600">Paid</p>
+                              <p className="font-bold text-green-700">
+                                ₦{paidFees.toLocaleString()}
+                              </p>
+                            </div>
+                            <div
+                              className={`${outstanding > 0 ? "bg-red-50" : "bg-green-50"} rounded-lg p-3 text-center`}
+                            >
+                              <p
+                                className={`text-xs ${outstanding > 0 ? "text-red-600" : "text-green-600"}`}
+                              >
+                                Outstanding
+                              </p>
+                              <p
+                                className={`font-bold ${outstanding > 0 ? "text-red-700" : "text-green-700"}`}
+                              >
+                                ₦{outstanding.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          {activeWard.invoices.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              No invoices found.
+                            </p>
+                          ) : (
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b">
+                                  {[
+                                    "Description",
+                                    "Session",
+                                    "Amount",
+                                    "Status",
+                                  ].map((h) => (
+                                    <th
+                                      key={h}
+                                      className="py-2 text-left text-muted-foreground font-medium"
+                                    >
+                                      {h}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {activeWard.invoices.map((inv) => (
+                                  <tr
+                                    key={inv.id}
+                                    className="border-b last:border-0"
+                                  >
+                                    <td className="py-2 text-foreground">
+                                      {inv.description}
+                                    </td>
+                                    <td className="py-2 text-muted-foreground">
+                                      {inv.session}
+                                    </td>
+                                    <td className="py-2 text-right">
+                                      ₦{inv.amount.toLocaleString()}
+                                    </td>
+                                    <td className="py-2 text-right">
+                                      {inv.paid >= inv.amount ? (
+                                        <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                                          Paid
+                                        </Badge>
+                                      ) : inv.paid > 0 ? (
+                                        <Badge className="bg-yellow-100 text-yellow-700 border-0 text-xs">
+                                          Partial
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-red-100 text-red-700 border-0 text-xs">
+                                          Unpaid
+                                        </Badge>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    {/* Attendance Tab */}
+                    <TabsContent value="attendance">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">
+                            Attendance by Course
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {activeWard.attendance.length === 0 ? (
+                            <div className="space-y-3">
+                              {[
+                                "Mathematics",
+                                "Physics",
+                                "Chemistry",
+                                "Biology",
+                                "GST",
+                              ].map((sub, i) => {
+                                const pct = 65 + i * 6;
+                                return (
                                   <div
                                     key={sub}
                                     className="flex items-center gap-3"
                                   >
-                                    <span className="text-sm text-slate-700 w-32 truncate">
+                                    <span className="text-sm text-foreground w-32 truncate">
                                       {sub}
                                     </span>
-                                    <div className="flex-1 bg-slate-100 rounded-full h-2">
+                                    <div className="flex-1 bg-muted rounded-full h-2">
                                       <div
-                                        className="bg-green-500 h-2 rounded-full"
-                                        style={{ width: `${65 + i * 6}%` }}
+                                        className={`h-2 rounded-full ${pct >= 75 ? "bg-green-500" : "bg-orange-500"}`}
+                                        style={{ width: `${pct}%` }}
                                       />
                                     </div>
-                                    <span className="text-xs text-slate-500">
-                                      {65 + i * 6}%
-                                    </span>
-                                  </div>
-                                ))}
-                                <p className="text-xs text-slate-400 mt-2">
-                                  * Sample attendance data
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                {wardAttendance.map((a) => {
-                                  const pct =
-                                    a.total > 0
-                                      ? Math.round((a.present / a.total) * 100)
-                                      : 0;
-                                  return (
-                                    <div
-                                      key={a.courseCode}
-                                      className="flex items-center gap-3"
+                                    <span
+                                      className={`text-xs font-medium ${pct < 75 ? "text-orange-600" : "text-muted-foreground"}`}
                                     >
-                                      <span className="text-sm text-slate-700 w-32 truncate">
-                                        {a.courseCode}
+                                      {pct}%
+                                    </span>
+                                    {pct < 75 && (
+                                      <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
+                                        Low
                                       </span>
-                                      <div className="flex-1 bg-slate-100 rounded-full h-2">
-                                        <div
-                                          className={`h-2 rounded-full ${
-                                            pct >= 75
-                                              ? "bg-green-500"
-                                              : pct >= 50
-                                                ? "bg-yellow-500"
-                                                : "bg-red-500"
-                                          }`}
-                                          style={{ width: `${pct}%` }}
-                                        />
-                                      </div>
-                                      <span className="text-xs text-slate-500">
-                                        {pct}%
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
-
-                      {/* Disciplinary Tab */}
-                      <TabsContent value="disciplinary">
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <AlertTriangle
-                                size={16}
-                                className="text-orange-500"
-                              />
-                              Disciplinary Notices
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            {wardDisciplinary.length === 0 ? (
-                              <div className="text-center py-6 text-slate-400">
-                                <CheckCircle
-                                  size={32}
-                                  className="mx-auto mb-2 text-green-400"
-                                />
-                                No disciplinary records.
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                {wardDisciplinary.map((d) => (
-                                  <div
-                                    key={d.caseNo}
-                                    className="border border-orange-200 bg-orange-50 rounded-lg p-4"
-                                  >
-                                    <div className="flex items-start justify-between">
-                                      <div>
-                                        <p className="font-medium text-orange-800">
-                                          {d.offence}
-                                        </p>
-                                        <p className="text-xs text-orange-600 mt-1">
-                                          Case No: {d.caseNo} &bull; {d.date}
-                                        </p>
-                                      </div>
-                                      <Badge className="bg-orange-100 text-orange-700 border-0 text-xs">
-                                        {d.status}
-                                      </Badge>
-                                    </div>
+                                    )}
                                   </div>
-                                ))}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
-                    </Tabs>
-                  )}
+                                );
+                              })}
+                              <p className="text-xs text-muted-foreground mt-2">
+                                * Sample attendance data
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {activeWard.attendance.map((a) => {
+                                const pct =
+                                  a.total > 0
+                                    ? Math.round((a.present / a.total) * 100)
+                                    : 0;
+                                const isLow = pct < LOW_ATTENDANCE_THRESHOLD;
+                                return (
+                                  <div
+                                    key={a.courseCode}
+                                    className="flex items-center gap-3"
+                                  >
+                                    <span className="text-sm text-foreground w-28 truncate">
+                                      {a.courseCode}
+                                    </span>
+                                    <div className="flex-1 bg-muted rounded-full h-2">
+                                      <div
+                                        className={`h-2 rounded-full ${pct >= 75 ? "bg-green-500" : pct >= 50 ? "bg-yellow-500" : "bg-red-500"}`}
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                    <span
+                                      className={`text-xs font-medium ${isLow ? "text-orange-600" : "text-muted-foreground"}`}
+                                    >
+                                      {pct}% ({a.present}/{a.total})
+                                    </span>
+                                    {isLow && (
+                                      <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
+                                        ⚠ Low
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    {/* Timetable Tab */}
+                    <TabsContent value="timetable">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">
+                            Weekly Timetable
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b">
+                                  {["Day", "Time", "Course", "Venue"].map(
+                                    (h) => (
+                                      <th
+                                        key={h}
+                                        className="py-2 text-left text-muted-foreground font-medium"
+                                      >
+                                        {h}
+                                      </th>
+                                    ),
+                                  )}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {getWardTimetable(activeWard.student).map(
+                                  (slot, i) => (
+                                    <tr
+                                      key={`${slot.day}-${slot.time}-${i}`}
+                                      className="border-b last:border-0"
+                                    >
+                                      <td className="py-2 font-medium text-foreground">
+                                        {slot.day}
+                                      </td>
+                                      <td className="py-2 text-muted-foreground">
+                                        {slot.time}
+                                      </td>
+                                      <td className="py-2 text-foreground">
+                                        {slot.course}
+                                      </td>
+                                      <td className="py-2 text-muted-foreground">
+                                        {slot.venue}
+                                      </td>
+                                    </tr>
+                                  ),
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    {/* Disciplinary Tab */}
+                    <TabsContent value="disciplinary">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <AlertTriangle
+                              size={16}
+                              className="text-orange-500"
+                            />
+                            Disciplinary Notices
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {activeWard.disciplinary.length === 0 ? (
+                            <div className="text-center py-6 text-muted-foreground">
+                              <CheckCircle
+                                size={32}
+                                className="mx-auto mb-2 text-green-400"
+                              />
+                              No disciplinary records.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {activeWard.disciplinary.map((d) => (
+                                <div
+                                  key={d.caseNo}
+                                  className="border border-orange-200 bg-orange-50 rounded-lg p-4"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <p className="font-medium text-orange-800">
+                                        {d.offence}
+                                      </p>
+                                      <p className="text-xs text-orange-600 mt-1">
+                                        Case No: {d.caseNo} • {d.date}
+                                      </p>
+                                    </div>
+                                    <Badge className="bg-orange-100 text-orange-700 border-0 text-xs">
+                                      {d.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
                 </>
-              )}
+              ) : null}
             </div>
           )}
 
           {/* WARD PROFILE PAGE */}
           {activePage === "ward" && (
             <div className="space-y-6">
-              {!selectedWard ? (
+              {!activeWard ? (
                 <Card>
-                  <CardContent className="p-8 text-center text-slate-400">
+                  <CardContent className="p-8 text-center text-muted-foreground">
                     <User size={40} className="mx-auto mb-3 opacity-30" />
                     No ward selected. Please link a ward first.
                   </CardContent>
@@ -971,40 +1188,46 @@ export function ParentDashboard() {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-start gap-6">
-                        <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-bold">
-                          {selectedWard.name.charAt(0)}
+                        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
+                          {activeWard.student.name.charAt(0)}
                         </div>
                         <div className="flex-1">
-                          <h2 className="text-xl font-bold text-slate-800">
-                            {selectedWard.name}
+                          <h2 className="text-xl font-bold text-foreground">
+                            {activeWard.student.name}
                           </h2>
-                          <p className="text-slate-500 text-sm">
-                            {selectedWard.matricNumber}
+                          <p className="text-muted-foreground text-sm">
+                            {activeWard.student.matricNumber}
                           </p>
                           <div className="grid grid-cols-2 gap-x-8 gap-y-2 mt-3 text-sm">
                             <div>
-                              <span className="text-slate-400">
+                              <span className="text-muted-foreground">
                                 Department:
                               </span>
-                              <span className="ml-2 font-medium text-slate-700">
-                                {selectedWard.department}
+                              <span className="ml-2 font-medium text-foreground">
+                                {activeWard.student.department}
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-400">Level:</span>
-                              <span className="ml-2 font-medium text-slate-700">
-                                {selectedWard.level}
+                              <span className="text-muted-foreground">
+                                Level:
+                              </span>
+                              <span className="ml-2 font-medium text-foreground">
+                                {activeWard.student.level}
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-400">Email:</span>
-                              <span className="ml-2 font-medium text-slate-700">
-                                {selectedWard.email}
+                              <span className="text-muted-foreground">
+                                Email:
+                              </span>
+                              <span className="ml-2 font-medium text-foreground">
+                                {activeWard.student.email}
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-400">CGPA:</span>
-                              <span className="ml-2 font-bold text-blue-700">
+                              <span className="text-muted-foreground">
+                                CGPA:
+                              </span>
+                              <span className="ml-2 font-bold text-primary">
                                 {cgpa.toFixed(2)}
                               </span>
                             </div>
@@ -1022,7 +1245,6 @@ export function ParentDashboard() {
                       </div>
                     </CardContent>
                   </Card>
-
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">
@@ -1034,7 +1256,8 @@ export function ParentDashboard() {
                         {(["100L", "200L", "300L", "400L"] as const).map(
                           (lvl, i) => {
                             const current =
-                              Number.parseInt(selectedWard.level, 10) || 100;
+                              Number.parseInt(activeWard.student.level, 10) ||
+                              100;
                             const thisLvl = (i + 1) * 100;
                             const done = current > thisLvl;
                             const active = current === thisLvl;
@@ -1048,27 +1271,21 @@ export function ParentDashboard() {
                                     done
                                       ? "bg-green-500 text-white"
                                       : active
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-slate-200 text-slate-500"
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted text-muted-foreground"
                                   }`}
                                 >
                                   {done ? "✓" : i + 1}
                                 </div>
                                 <span
-                                  className={`text-xs ${
-                                    active
-                                      ? "text-blue-700 font-semibold"
-                                      : done
-                                        ? "text-green-600"
-                                        : "text-slate-400"
-                                  }`}
+                                  className={`text-xs ${active ? "text-primary font-semibold" : done ? "text-green-600" : "text-muted-foreground"}`}
                                 >
                                   {lvl}
                                 </span>
                                 {i < 3 && (
                                   <ChevronRight
                                     size={14}
-                                    className="text-slate-300"
+                                    className="text-muted-foreground"
                                   />
                                 )}
                               </div>
@@ -1089,25 +1306,32 @@ export function ParentDashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Link a Ward</CardTitle>
-                  <p className="text-sm text-slate-500">
-                    Enter your ward's matric number to link their academic
-                    record to your portal.
+                  <p className="text-sm text-muted-foreground">
+                    Enter your ward's matric number or full name to link their
+                    academic record.
                   </p>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <Label>Ward's Matric Number</Label>
+                      <Label>Ward's Matric Number or Name</Label>
                       <div className="flex gap-2 mt-1">
-                        <Input
-                          value={linkInput}
-                          onChange={(e) => setLinkInput(e.target.value)}
-                          onKeyDown={(e) =>
-                            e.key === "Enter" && handleLinkWard()
-                          }
-                          placeholder="e.g. CSC/2021/001"
-                          data-ocid="parent-link.matric_input"
-                        />
+                        <div className="relative flex-1">
+                          <Search
+                            size={14}
+                            className="absolute left-3 top-3 text-muted-foreground"
+                          />
+                          <Input
+                            value={linkInput}
+                            onChange={(e) => setLinkInput(e.target.value)}
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && handleLinkWard()
+                            }
+                            placeholder="Matric number or student name"
+                            className="pl-9"
+                            data-ocid="parent-link.matric_input"
+                          />
+                        </div>
                         <Button
                           type="button"
                           onClick={handleLinkWard}
@@ -1135,24 +1359,22 @@ export function ParentDashboard() {
                       data-ocid="parent-link.wards_list"
                     >
                       {linkedWards.map((matric) => {
-                        const student = allStudents.find(
-                          (s) => s.matricNumber === matric,
-                        );
+                        const data = wardsData[matric];
                         return (
                           <div
                             key={matric}
-                            className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                            className="flex items-center justify-between p-3 bg-muted/20 rounded-lg"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-bold">
-                                {student?.name.charAt(0) ?? "?"}
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
+                                {data?.student.name.charAt(0) ?? "?"}
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-slate-800">
-                                  {student?.name ?? matric}
+                                <p className="text-sm font-medium text-foreground">
+                                  {data?.student.name ?? matric}
                                 </p>
-                                <p className="text-xs text-slate-500">
-                                  {matric} &bull; {student?.department}
+                                <p className="text-xs text-muted-foreground">
+                                  {matric} • {data?.student.department}
                                 </p>
                               </div>
                             </div>
@@ -1181,7 +1403,7 @@ export function ParentDashboard() {
             <div className="space-y-4">
               {notifications.length === 0 ? (
                 <Card>
-                  <CardContent className="p-8 text-center text-slate-400">
+                  <CardContent className="p-8 text-center text-muted-foreground">
                     <Bell size={40} className="mx-auto mb-3 opacity-30" />
                     No announcements at this time.
                   </CardContent>
@@ -1194,19 +1416,20 @@ export function ParentDashboard() {
                   >
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between">
-                        <h3 className="font-semibold text-slate-800">
-                          {n.title}
-                        </h3>
-                        <Badge className="bg-blue-100 text-blue-700 border-0 text-xs ml-2">
-                          {n.target}
-                        </Badge>
+                        <div>
+                          <h3 className="font-semibold text-foreground">
+                            {n.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {n.body}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {n.date
+                              ? new Date(n.date).toLocaleDateString()
+                              : "—"}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1">
-                        By {n.author} &bull; {n.date}
-                      </p>
-                      <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-                        {n.body}
-                      </p>
                     </CardContent>
                   </Card>
                 ))

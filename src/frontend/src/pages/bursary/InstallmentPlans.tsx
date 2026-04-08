@@ -1,4 +1,4 @@
-import { CheckCircle, PlusCircle, XCircle } from "lucide-react";
+import { Award, CheckCircle, PlusCircle, Receipt, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "../../components/ui/badge";
@@ -18,6 +18,7 @@ import {
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Progress } from "../../components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -25,8 +26,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
+import { Separator } from "../../components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
 import { Textarea } from "../../components/ui/textarea";
 import { getLocalInvoices, getLocalStudents } from "../../utils/sampleData";
+
+const INSTITUTION_NAME = "Federal University of Education, Kontagora";
+const INSTITUTION_ABBR = "FUEK";
 
 interface InstallmentEntry {
   month: number;
@@ -66,7 +79,7 @@ const SEED_PLANS: InstallmentPlan[] = [
       { month: 3, amount: 50000, status: "upcoming", dueDate: "2024-04-01" },
     ],
     status: "approved",
-    notes: "Approved by HOD bursary. Payment must be completed before exams.",
+    notes: "Approved by HOD Bursary. Payment must be completed before exams.",
     createdAt: "2024-01-20",
   },
   {
@@ -94,10 +107,10 @@ const SEED_PLANS: InstallmentPlan[] = [
     invoiceId: "INV-3",
     invoiceAmount: 200000,
     reason: "Medical emergency in family",
-    months: 6,
-    installments: Array.from({ length: 6 }, (_, i) => ({
+    months: 4,
+    installments: Array.from({ length: 4 }, (_, i) => ({
       month: i + 1,
-      amount: Math.ceil(200000 / 6),
+      amount: 50000,
       status: "upcoming" as const,
       dueDate: `2024-0${i + 2}-01`,
     })),
@@ -107,19 +120,24 @@ const SEED_PLANS: InstallmentPlan[] = [
   },
 ];
 
-function getInstallmentStatusStyle(status: InstallmentEntry["status"]) {
-  if (status === "paid") return "bg-green-100 text-green-700";
-  if (status === "overdue") return "bg-red-100 text-red-700";
-  return "bg-blue-100 text-blue-700";
+function statusStyle(s: InstallmentEntry["status"]) {
+  if (s === "paid") return "bg-green-100 text-green-700 border-green-200";
+  if (s === "overdue")
+    return "bg-destructive/10 text-destructive border-destructive/20";
+  return "bg-blue-50 text-blue-700 border-blue-200";
 }
 
-function getPlanStatusBadge(status: InstallmentPlan["status"]) {
+function planBadge(status: InstallmentPlan["status"]) {
   if (status === "approved")
     return (
       <Badge className="bg-green-100 text-green-700 border-0">Approved</Badge>
     );
   if (status === "rejected")
-    return <Badge className="bg-red-100 text-red-700 border-0">Rejected</Badge>;
+    return (
+      <Badge className="bg-destructive/10 text-destructive border-0">
+        Rejected
+      </Badge>
+    );
   return (
     <Badge className="bg-amber-100 text-amber-700 border-0">Pending</Badge>
   );
@@ -134,6 +152,8 @@ export function InstallmentPlans() {
   const [reviewDialog, setReviewDialog] = useState<InstallmentPlan | null>(
     null,
   );
+  const [clearanceDialog, setClearanceDialog] =
+    useState<InstallmentPlan | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
 
   const [form, setForm] = useState({
@@ -185,6 +205,7 @@ export function InstallmentPlans() {
     };
     setPlans((prev) => [plan, ...prev]);
     setCreateDialog(false);
+    setForm({ studentMatric: "", invoiceId: "", months: 3, reason: "" });
     toast.success("Installment plan created and pending approval.");
   };
 
@@ -215,105 +236,193 @@ export function InstallmentPlans() {
     toast.success("Installment marked as paid.");
   };
 
+  const isPlanFullyPaid = (plan: InstallmentPlan) =>
+    plan.installments.every((i) => i.status === "paid");
+
+  // Summary stats
+  const totalActive = plans.filter((p) => p.status === "approved").length;
+  const totalPending = plans.filter((p) => p.status === "pending").length;
+  const totalAmount = plans.reduce((s, p) => s + p.invoiceAmount, 0);
+  const collected = plans.reduce(
+    (s, p) =>
+      s +
+      p.installments
+        .filter((i) => i.status === "paid")
+        .reduce((a, i) => a + i.amount, 0),
+    0,
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-ocid="installment.root">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1 className="text-2xl font-bold text-foreground">
             Installment Plans
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Manage student fee payment schedules
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage student fee payment schedules and clearance
           </p>
         </div>
         <Button
           onClick={() => setCreateDialog(true)}
-          className="bg-blue-600 hover:bg-blue-700"
           data-ocid="installment.create_button"
         >
           <PlusCircle size={16} className="mr-2" /> Create Plan
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {plans.map((plan) => (
-          <Card key={plan.id} data-ocid={`installment.plan.${plan.id}`}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between flex-wrap gap-2">
-                <div>
-                  <CardTitle className="text-base">
-                    {plan.studentName}
-                  </CardTitle>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {plan.studentMatric} · Invoice: {plan.invoiceId} ·{" "}
-                    {formatNaira(plan.invoiceAmount)}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5 italic">
-                    "{plan.reason}"
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getPlanStatusBadge(plan.status)}
-                  {plan.status === "pending" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setReviewDialog(plan);
-                        setReviewNotes("");
-                      }}
-                      data-ocid={`installment.review_button.${plan.id}`}
-                    >
-                      Review
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 flex-wrap">
-                {plan.installments.map((inst) => (
-                  <div
-                    key={`${plan.id}-m${inst.month}`}
-                    className={`flex flex-col items-center rounded-lg border px-3 py-2 text-xs ${getInstallmentStatusStyle(inst.status)}`}
-                  >
-                    <span className="font-bold">Month {inst.month}</span>
-                    <span className="font-semibold mt-0.5">
-                      {formatNaira(inst.amount)}
-                    </span>
-                    <span className="opacity-70 mt-0.5">{inst.dueDate}</span>
-                    <Badge
-                      className="mt-1 text-[10px] border-0 capitalize px-1 py-0"
-                      style={{ background: "transparent", fontWeight: 600 }}
-                    >
-                      {inst.status}
-                    </Badge>
-                    {plan.status === "approved" && inst.status !== "paid" && (
-                      <button
-                        type="button"
-                        className="mt-1 text-[10px] underline text-blue-600"
-                        onClick={() =>
-                          markInstallmentPaid(plan.id, inst.month - 1)
-                        }
-                      >
-                        Mark Paid
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {plan.notes && (
-                <p className="text-xs text-slate-500 mt-3 italic border-t pt-2">
-                  Note: {plan.notes}
-                </p>
-              )}
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Active Plans",
+            value: totalActive,
+            color: "text-green-600",
+          },
+          {
+            label: "Pending Review",
+            value: totalPending,
+            color: "text-amber-600",
+          },
+          {
+            label: "Total Installment Amount",
+            value: formatNaira(totalAmount),
+            color: "text-primary",
+          },
+          {
+            label: "Amount Collected",
+            value: formatNaira(collected),
+            color: "text-green-600",
+          },
+        ].map((kpi) => (
+          <Card key={kpi.label} data-ocid="installment.kpi_card">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground">{kpi.label}</p>
+              <p className={`text-xl font-bold ${kpi.color}`}>{kpi.value}</p>
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Plans List */}
+      <div className="space-y-4">
+        {plans.map((plan) => {
+          const paidCount = plan.installments.filter(
+            (i) => i.status === "paid",
+          ).length;
+          const overdueCount = plan.installments.filter(
+            (i) => i.status === "overdue",
+          ).length;
+          const fullyPaid = isPlanFullyPaid(plan);
+          return (
+            <Card key={plan.id} data-ocid={`installment.plan.${plan.id}`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between flex-wrap gap-2">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base">
+                      {plan.studentName}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {plan.studentMatric} · Invoice:{" "}
+                      <span className="font-mono">{plan.invoiceId}</span> ·{" "}
+                      {formatNaira(plan.invoiceAmount)}
+                    </p>
+                    {plan.reason && (
+                      <p className="text-xs text-muted-foreground mt-0.5 italic">
+                        "{plan.reason}"
+                      </p>
+                    )}
+                    {overdueCount > 0 && (
+                      <p className="text-xs text-destructive font-medium mt-1">
+                        ⚠ {overdueCount} installment
+                        {overdueCount > 1 ? "s" : ""} overdue
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {planBadge(plan.status)}
+                    {fullyPaid && plan.status === "approved" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setClearanceDialog(plan)}
+                        data-ocid={`installment.clearance_button.${plan.id}`}
+                      >
+                        <Award size={13} className="mr-1" /> Clearance
+                      </Button>
+                    )}
+                    {plan.status === "pending" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setReviewDialog(plan);
+                          setReviewNotes("");
+                        }}
+                        data-ocid={`installment.review_button.${plan.id}`}
+                      >
+                        Review
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {plan.status === "approved" && (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>Progress</span>
+                      <span>
+                        {paidCount}/{plan.installments.length} installments paid
+                      </span>
+                    </div>
+                    <Progress
+                      value={(paidCount / plan.installments.length) * 100}
+                      className="h-2"
+                    />
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 flex-wrap">
+                  {plan.installments.map((inst) => (
+                    <div
+                      key={`${plan.id}-m${inst.month}`}
+                      className={`flex flex-col items-center rounded-lg border px-3 py-2 text-xs ${statusStyle(inst.status)}`}
+                    >
+                      <span className="font-bold">Month {inst.month}</span>
+                      <span className="font-semibold mt-0.5">
+                        {formatNaira(inst.amount)}
+                      </span>
+                      <span className="opacity-70 mt-0.5">{inst.dueDate}</span>
+                      <span className="capitalize font-semibold mt-1">
+                        {inst.status}
+                      </span>
+                      {plan.status === "approved" && inst.status !== "paid" && (
+                        <button
+                          type="button"
+                          className="mt-1 text-[10px] underline text-primary"
+                          onClick={() =>
+                            markInstallmentPaid(plan.id, inst.month - 1)
+                          }
+                        >
+                          Mark Paid
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {plan.notes && (
+                  <p className="text-xs text-muted-foreground mt-3 italic border-t pt-2">
+                    Note: {plan.notes}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
         {plans.length === 0 && (
           <Card>
             <CardContent
-              className="py-10 text-center text-slate-400"
+              className="py-10 text-center text-muted-foreground"
               data-ocid="installment.empty_state"
             >
               No installment plans found.
@@ -321,6 +430,56 @@ export function InstallmentPlans() {
           </Card>
         )}
       </div>
+
+      {/* Summary Table */}
+      {plans.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">All Plans Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table data-ocid="installment.summary_table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Invoice</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Collected</TableHead>
+                  <TableHead className="text-right">Remaining</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {plans.map((plan) => {
+                  const collectedAmt = plan.installments
+                    .filter((i) => i.status === "paid")
+                    .reduce((s, i) => s + i.amount, 0);
+                  return (
+                    <TableRow key={plan.id}>
+                      <TableCell className="font-medium">
+                        {plan.studentName}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {plan.invoiceId}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatNaira(plan.invoiceAmount)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-green-600">
+                        {formatNaira(collectedAmt)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-destructive">
+                        {formatNaira(plan.invoiceAmount - collectedAmt)}
+                      </TableCell>
+                      <TableCell>{planBadge(plan.status)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create Plan Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
@@ -382,7 +541,7 @@ export function InstallmentPlans() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[3, 4, 5, 6].map((m) => (
+                  {[2, 3, 4, 5, 6].map((m) => (
                     <SelectItem key={m} value={String(m)}>
                       {m} months
                     </SelectItem>
@@ -390,6 +549,22 @@ export function InstallmentPlans() {
                 </SelectContent>
               </Select>
             </div>
+            {form.invoiceId && form.months > 0 && (
+              <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                Monthly payment:{" "}
+                <strong>
+                  {formatNaira(
+                    Math.ceil(
+                      ((invoices.find((i) => i.id === form.invoiceId)?.amount ??
+                        0) -
+                        (invoices.find((i) => i.id === form.invoiceId)?.paid ??
+                          0)) /
+                        form.months,
+                    ),
+                  )}
+                </strong>
+              </div>
+            )}
             <div>
               <Label>Reason for Installment</Label>
               <Textarea
@@ -407,10 +582,7 @@ export function InstallmentPlans() {
             <Button variant="outline" onClick={() => setCreateDialog(false)}>
               Cancel
             </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={createPlan}
-            >
+            <Button onClick={createPlan} data-ocid="installment.confirm_create">
               Create Plan
             </Button>
           </DialogFooter>
@@ -479,6 +651,104 @@ export function InstallmentPlans() {
               data-ocid="installment.approve_button"
             >
               <CheckCircle size={14} className="mr-1" /> Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clearance Certificate Dialog */}
+      <Dialog
+        open={!!clearanceDialog}
+        onOpenChange={() => setClearanceDialog(null)}
+      >
+        <DialogContent
+          className="max-w-lg"
+          data-ocid="installment.clearance_dialog"
+        >
+          <DialogHeader>
+            <DialogTitle>Fee Clearance Certificate</DialogTitle>
+          </DialogHeader>
+          {clearanceDialog && (
+            <div
+              className="border rounded-lg p-6 space-y-4 text-sm"
+              id="inst-clearance-cert"
+            >
+              <div className="text-center border-b pb-4 space-y-1">
+                <p className="font-bold text-base text-foreground uppercase">
+                  {INSTITUTION_NAME}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Bursary &amp; Finance Division
+                </p>
+                <p className="font-semibold text-foreground uppercase tracking-wide mt-2">
+                  Installment Fee Clearance Certificate
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p>
+                  This is to certify that{" "}
+                  <strong>{clearanceDialog.studentName}</strong>, Matric No.{" "}
+                  <strong>{clearanceDialog.studentMatric}</strong>, has
+                  completed all installment payments for Invoice{" "}
+                  <strong>{clearanceDialog.invoiceId}</strong>, totaling{" "}
+                  <strong>{formatNaira(clearanceDialog.invoiceAmount)}</strong>.
+                </p>
+                <Separator />
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Plan ID</p>
+                    <p className="font-mono font-bold">{clearanceDialog.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Clearance Date</p>
+                    <p className="font-bold">
+                      {new Date().toLocaleDateString("en-GB")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Installments Paid</p>
+                    <p className="font-bold text-green-600">
+                      {clearanceDialog.months}/{clearanceDialog.months}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Total Amount</p>
+                    <p className="font-bold">
+                      {formatNaira(clearanceDialog.invoiceAmount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="border-t pt-4 flex justify-between text-xs">
+                <div>
+                  <p className="font-semibold text-foreground">
+                    Bursar's Signature
+                  </p>
+                  <div className="border-b border-foreground w-32 mt-4" />
+                  <p className="text-muted-foreground mt-1">
+                    Date: _______________
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-foreground">
+                    {INSTITUTION_ABBR} MIS
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    Printed: {new Date().toLocaleDateString("en-GB")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearanceDialog(null)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => window.print()}
+              data-ocid="installment.print_clearance"
+            >
+              <Receipt size={14} className="mr-2" /> Print Certificate
             </Button>
           </DialogFooter>
         </DialogContent>

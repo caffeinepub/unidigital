@@ -1,15 +1,17 @@
 import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createActor } from "./backend";
 import { AppLayout } from "./components/AppLayout";
 import { AssignmentProvider } from "./contexts/AssignmentContext";
 import { CBTProvider } from "./contexts/CBTContext";
+import { ModuleGatingProvider } from "./contexts/ModuleGatingContext";
 import { NotificationsProvider } from "./contexts/NotificationsContext";
 import { ResultProcessingProvider } from "./contexts/ResultProcessingContext";
 import { StaffRequestProvider } from "./contexts/StaffRequestContext";
 import { LoginPage } from "./pages/LoginPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { LoginAuditLog } from "./pages/admin/LoginAuditLog";
 import { AlumniDashboard } from "./pages/alumni/AlumniDashboard";
 import type { AlumniPage } from "./pages/alumni/AlumniDashboard";
 import { BursaryDashboard } from "./pages/bursary/BursaryDashboard";
@@ -17,13 +19,24 @@ import { HODDashboard } from "./pages/hod/HODDashboard";
 import { HRDashboard } from "./pages/hr/HRDashboard";
 import { LecturerDashboard } from "./pages/lecturer/LecturerDashboard";
 import { ParentDashboard } from "./pages/parent/ParentDashboard";
+import { LoginActivityDashboard } from "./pages/shared/LoginActivityDashboard";
+import { PublicVerification } from "./pages/shared/PublicVerification";
+import { StaffSelfService } from "./pages/shared/StaffSelfService";
+import { StudentProfilePortal } from "./pages/shared/StudentProfilePortal";
+import { UserProfileSettings } from "./pages/shared/UserProfileSettings";
 import { StudentDashboard } from "./pages/student/StudentDashboard";
 import { initSampleData, initV6, initV9, initV19 } from "./utils/sampleData";
+import {
+  recordSessionEnd,
+  recordSessionStart,
+  seedDemoSessions,
+} from "./utils/sessionUtils";
 
 initSampleData();
 initV6();
 initV9();
 initV19();
+seedDemoSessions();
 
 type AppState = "loading" | "login" | "onboarding" | "app";
 
@@ -42,28 +55,45 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activePage, setActivePage] = useState("dashboard");
 
+  const sessionStartedRef = useRef(false);
+
   useEffect(() => {
     if (isInitializing) return;
     if (!isAuthenticated) {
       setAppState("login");
+      sessionStartedRef.current = false;
       return;
     }
     if (actor) {
-      (actor as any)
+      (
+        actor as unknown as {
+          getCallerUserProfile: () => Promise<{
+            name: string;
+            email: string;
+            role: string;
+          } | null>;
+        }
+      )
         .getCallerUserProfile()
-        .then((profile) => {
-          if (profile?.role) {
-            setUserProfile({
-              name: profile.name,
-              email: profile.email,
-              role: profile.role,
-            });
-            setActivePage("dashboard");
-            setAppState("app");
-          } else {
-            setAppState("onboarding");
-          }
-        })
+        .then(
+          (profile: { name: string; email: string; role: string } | null) => {
+            if (profile?.role) {
+              setUserProfile({
+                name: profile.name,
+                email: profile.email,
+                role: profile.role,
+              });
+              setActivePage("dashboard");
+              setAppState("app");
+              if (!sessionStartedRef.current) {
+                sessionStartedRef.current = true;
+                recordSessionStart(profile.email || profile.name, profile.role);
+              }
+            } else {
+              setAppState("onboarding");
+            }
+          },
+        )
         .catch(() => setAppState("onboarding"));
     }
   }, [isAuthenticated, actor, isInitializing]);
@@ -72,7 +102,11 @@ export default function App() {
     setUserProfile(profile);
     if (actor) {
       try {
-        await (actor as any).saveCallerUserProfile({
+        await (
+          actor as unknown as {
+            saveCallerUserProfile: (p: UserProfile) => Promise<void>;
+          }
+        ).saveCallerUserProfile({
           name: profile.name,
           email: profile.email,
           role: profile.role,
@@ -83,13 +117,22 @@ export default function App() {
     }
     setActivePage("dashboard");
     setAppState("app");
+    if (!sessionStartedRef.current) {
+      sessionStartedRef.current = true;
+      recordSessionStart(profile.email || profile.name, profile.role);
+    }
   };
 
   const handleLogout = () => {
+    recordSessionEnd();
+    sessionStartedRef.current = false;
     clear();
     setUserProfile(null);
     setAppState("login");
   };
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has("verify")) return <PublicVerification />;
 
   if (appState === "loading" || isInitializing) {
     return (
@@ -107,6 +150,79 @@ export default function App() {
     return <OnboardingPage onComplete={handleOnboarding} />;
 
   const role = userProfile?.role ?? "admin";
+  const userId = userProfile?.email ?? userProfile?.name ?? "user";
+  const userName = userProfile?.name ?? "User";
+
+  const wrapInLayout = (children: React.ReactNode) => (
+    <ModuleGatingProvider>
+      <NotificationsProvider>
+        <ResultProcessingProvider>
+          <CBTProvider>
+            <AssignmentProvider>
+              <StaffRequestProvider>
+                <AppLayout
+                  role={role}
+                  userName={userName}
+                  activePage={activePage}
+                  onNavigate={setActivePage}
+                  onLogout={handleLogout}
+                >
+                  {children}
+                </AppLayout>
+              </StaffRequestProvider>
+            </AssignmentProvider>
+          </CBTProvider>
+        </ResultProcessingProvider>
+      </NotificationsProvider>
+    </ModuleGatingProvider>
+  );
+
+  if (activePage === "login-activity") {
+    return wrapInLayout(
+      <LoginActivityDashboard
+        userId={userId}
+        userName={userName}
+        role={role}
+      />,
+    );
+  }
+
+  if (activePage === "my-profile") {
+    return wrapInLayout(
+      <UserProfileSettings
+        currentName={userProfile?.name ?? ""}
+        currentEmail={userProfile?.email ?? ""}
+        currentRole={userProfile?.role ?? ""}
+        onProfileUpdated={(updated) => {
+          setUserProfile(updated);
+        }}
+      />,
+    );
+  }
+
+  if (activePage === "student-profiles" || activePage === "student-profile") {
+    const portalRole =
+      role === "student" ||
+      role === "admin" ||
+      role === "lecturer" ||
+      role === "hod" ||
+      role === "hr" ||
+      role === "bursary"
+        ? (role as "admin" | "student" | "lecturer" | "hod" | "hr" | "bursary")
+        : "admin";
+    return wrapInLayout(
+      <StudentProfilePortal
+        userRole={portalRole}
+        userEmail={userProfile?.email}
+      />,
+    );
+  }
+
+  if (activePage === "staff-profile") {
+    return wrapInLayout(
+      <StaffSelfService userRole={role} userName={userProfile?.name} />,
+    );
+  }
 
   type AdminPage =
     | "dashboard"
@@ -186,9 +302,15 @@ export default function App() {
     | "system-admin"
     | "course-catalog"
     | "announcement-view"
-    | "communication-center-admin";
+    | "communication-center-admin"
+    | "malpractice-reports"
+    | "id-cards"
+    | "student-profiles";
 
   const renderContent = () => {
+    if (role === "admin" && activePage === "login-audit-log")
+      return <LoginAuditLog />;
+
     switch (role) {
       case "admin":
         return <AdminDashboard activePage={activePage as AdminPage} />;
@@ -237,9 +359,10 @@ export default function App() {
                 | "course-catalog"
                 | "announcements-view"
                 | "communication-center"
+                | "my-certificates"
             }
             userEmail={userProfile?.email ?? ""}
-            userName={userProfile?.name ?? ""}
+            userName={userName}
           />
         );
       case "lecturer":
@@ -343,6 +466,8 @@ export default function App() {
                 | "course-catalog"
                 | "communication-center"
                 | "announcement-view"
+                | "curriculum-management"
+                | "certificate-courses"
             }
           />
         );
@@ -355,25 +480,5 @@ export default function App() {
     }
   };
 
-  return (
-    <NotificationsProvider>
-      <ResultProcessingProvider>
-        <CBTProvider>
-          <AssignmentProvider>
-            <StaffRequestProvider>
-              <AppLayout
-                role={role}
-                userName={userProfile?.name ?? "User"}
-                activePage={activePage}
-                onNavigate={setActivePage}
-                onLogout={handleLogout}
-              >
-                {renderContent()}
-              </AppLayout>
-            </StaffRequestProvider>
-          </AssignmentProvider>
-        </CBTProvider>
-      </ResultProcessingProvider>
-    </NotificationsProvider>
-  );
+  return wrapInLayout(renderContent());
 }

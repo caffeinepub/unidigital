@@ -3,12 +3,14 @@ import {
   CheckCircle,
   DollarSign,
   FileText,
+  MessageSquare,
   PlusCircle,
+  Printer,
+  RefreshCw,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -34,6 +36,7 @@ import {
 } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
 import type { BudgetRequest } from "../hod/BudgetRequest";
+import { categoryLabels } from "../hod/BudgetRequest";
 
 const LS_KEY = "unidigital_budget_requests";
 const PROC_KEY = "unidigital_procurement_requests";
@@ -43,6 +46,7 @@ interface Expenditure {
   id: string;
   budgetRequestId: string;
   lineItemId: string;
+  lineItemLabel: string;
   description: string;
   actualAmount: number;
   recordedAt: string;
@@ -107,6 +111,10 @@ const statusConfig: Record<
   },
   approved: { label: "Approved", color: "bg-green-100 text-green-700" },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700" },
+  revision_requested: {
+    label: "Revision Requested",
+    color: "bg-amber-100 text-amber-700",
+  },
 };
 
 type AdminTab = "requests" | "expenditure" | "procurement" | "reports";
@@ -117,13 +125,15 @@ export function BudgetManagement() {
   const [expenditures, setExpenditures] = useState<Expenditure[]>(loadExp);
   const [procItems, setProcItems] = useState<ProcurementItem[]>(loadProc);
 
+  // Review dialog state
   const [reviewId, setReviewId] = useState<string | null>(null);
   const [reviewAction, setReviewAction] = useState<
-    "approve" | "reject" | "finance_approve" | null
+    "approve" | "reject" | "finance_approve" | "revision" | null
   >(null);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewAmount, setReviewAmount] = useState("");
 
+  // Expenditure dialog state
   const [expDialog, setExpDialog] = useState(false);
   const [expForm, setExpForm] = useState({
     budgetRequestId: "",
@@ -132,12 +142,14 @@ export function BudgetManagement() {
     actualAmount: "",
   });
 
+  // Procurement review state
   const [procReviewId, setProcReviewId] = useState<string | null>(null);
   const [procAction, setProcAction] = useState<
     "approve" | "reject" | "delivered" | null
   >(null);
   const [procComment, setProcComment] = useState("");
 
+  // Filters
   const [deptFilter, setDeptFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -173,26 +185,36 @@ export function BudgetManagement() {
         if (reviewAction === "approve")
           return {
             ...r,
-            status: "approved",
+            status: "approved" as const,
             adminComment: reviewComment,
             approvedAmount: Number.parseFloat(reviewAmount) || r.totalEstimated,
           };
         if (reviewAction === "finance_approve")
           return {
             ...r,
-            status: "finance_approved",
+            status: "finance_approved" as const,
             financeComment: reviewComment,
           };
-        return { ...r, status: "rejected", adminComment: reviewComment };
+        if (reviewAction === "revision")
+          return {
+            ...r,
+            status: "revision_requested" as const,
+            revisionNote: reviewComment,
+          };
+        return {
+          ...r,
+          status: "rejected" as const,
+          adminComment: reviewComment,
+        };
       }),
     );
-    toast.success(
-      reviewAction === "approve"
-        ? "Budget approved."
-        : reviewAction === "finance_approve"
-          ? "Budget forwarded to Admin."
-          : "Budget rejected.",
-    );
+    const msg = {
+      approve: "Budget approved.",
+      finance_approve: "Budget forwarded to Admin.",
+      revision: "Revision requested.",
+      reject: "Budget rejected.",
+    }[reviewAction];
+    toast.success(msg);
     setReviewId(null);
     setReviewAction(null);
     setReviewComment("");
@@ -204,18 +226,22 @@ export function BudgetManagement() {
       toast.error("Fill in all required fields.");
       return;
     }
+    const req = requests.find((r) => r.id === expForm.budgetRequestId);
+    const lineItem = req?.items.find((i) => i.id === expForm.lineItemId);
     const exp: Expenditure = {
       id: `EXP-${Date.now()}`,
       budgetRequestId: expForm.budgetRequestId,
       lineItemId: expForm.lineItemId,
+      lineItemLabel: lineItem
+        ? `${categoryLabels[lineItem.category]} — ${lineItem.description}`
+        : "General",
       description: expForm.description,
       actualAmount: Number.parseFloat(expForm.actualAmount),
       recordedAt: new Date().toISOString(),
-      recordedBy: "Admin",
+      recordedBy: "Finance Officer",
     };
     const updated = [...expenditures, exp];
     setExpenditures(updated);
-    // Update actual spend on the budget request
     const reqSpends: Record<string, number> = {};
     for (const e of updated) {
       reqSpends[e.budgetRequestId] =
@@ -254,10 +280,69 @@ export function BudgetManagement() {
           : p,
       ),
     );
-    toast.success(`Procurement request ${procAction}.`);
+    toast.success(`Procurement ${procAction}d.`);
     setProcReviewId(null);
     setProcAction(null);
     setProcComment("");
+  };
+
+  const printReport = () => {
+    const deptSums = departments.map((dept) => {
+      const dReqs = requests.filter((r) => r.department === dept);
+      const approved = dReqs
+        .filter((r) => r.status === "approved")
+        .reduce((s, r) => s + (r.approvedAmount ?? r.totalEstimated), 0);
+      const spent = dReqs.reduce((s, r) => s + (r.actualSpend ?? 0), 0);
+      const util = approved > 0 ? Math.round((spent / approved) * 100) : 0;
+      const variance = approved - spent;
+      const budgetStatus =
+        util > 100 ? "Over Budget" : util > 90 ? "Near Limit" : "On Budget";
+      return { dept, approved, spent, variance, util, budgetStatus };
+    });
+
+    const rows = deptSums
+      .map(
+        (d) => `<tr>
+        <td>${d.dept}</td>
+        <td style="text-align:right">₦${d.approved.toLocaleString()}</td>
+        <td style="text-align:right">₦${d.spent.toLocaleString()}</td>
+        <td style="text-align:right;color:${d.variance >= 0 ? "green" : "red"}">₦${d.variance.toLocaleString()}</td>
+        <td style="text-align:right">${d.util}%</td>
+        <td style="color:${d.budgetStatus === "Over Budget" ? "red" : d.budgetStatus === "Near Limit" ? "orange" : "green"}">${d.budgetStatus}</td>
+      </tr>`,
+      )
+      .join("");
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><title>Budget Utilization Report</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:36px;max-width:900px;margin:auto;font-size:13px}
+      h2,h3{text-align:center;margin:4px 0}
+      table{width:100%;border-collapse:collapse;margin-top:16px}
+      th,td{border:1px solid #ccc;padding:7px 10px}
+      th{background:#f0f4f8;font-weight:bold}
+      tfoot td{font-weight:bold;background:#e8f0f8}
+      .summary{display:flex;gap:30px;margin:16px 0;font-size:12px;justify-content:center}
+      .summary-item{text-align:center;padding:10px 20px;border:1px solid #ddd;border-radius:6px}
+      .footer{margin-top:40px;font-size:11px;text-align:center;color:#888}
+    </style></head><body>
+    <h2>FEDERAL UNIVERSITY OF EDUCATION KONTAGORA</h2>
+    <h3>BUDGET UTILIZATION REPORT — ${new Date().getFullYear()}</h3>
+    <div class="summary">
+      <div class="summary-item"><div style="font-size:11px;color:#666">Total Requested</div><div style="font-weight:bold;color:#2563eb">₦${totalRequested.toLocaleString()}</div></div>
+      <div class="summary-item"><div style="font-size:11px;color:#666">Total Approved</div><div style="font-weight:bold;color:#16a34a">₦${totalApproved.toLocaleString()}</div></div>
+      <div class="summary-item"><div style="font-size:11px;color:#666">Total Spent</div><div style="font-weight:bold;color:#7c3aed">₦${totalSpent.toLocaleString()}</div></div>
+      <div class="summary-item"><div style="font-size:11px;color:#666">Variance</div><div style="font-weight:bold;color:${variance >= 0 ? "#0891b2" : "#dc2626"}">₦${variance.toLocaleString()}</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Department</th><th>Approved (₦)</th><th>Spent (₦)</th><th>Variance (₦)</th><th>Utilization %</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="footer">FUEK MIS — Printed: ${new Date().toLocaleDateString()} | Page 1 of 1</div>
+    <script>window.onload=()=>window.print()</script>
+    </body></html>`);
+    win.document.close();
   };
 
   const reviewedReq = reviewId ? requests.find((r) => r.id === reviewId) : null;
@@ -265,7 +350,6 @@ export function BudgetManagement() {
     ? procItems.find((p) => p.id === procReviewId)
     : null;
 
-  // Report metrics
   const totalRequested = requests.reduce((s, r) => s + r.totalEstimated, 0);
   const totalApproved = requests
     .filter((r) => r.status === "approved")
@@ -282,40 +366,68 @@ export function BudgetManagement() {
     return { dept, count: dReqs.length, approved, spent };
   });
 
+  // Category breakdown across all approved requests
+  const categoryBreakdown: Record<string, { approved: number; spent: number }> =
+    {};
+  for (const r of requests.filter((r) => r.status === "approved")) {
+    for (const item of r.items) {
+      if (!categoryBreakdown[item.category]) {
+        categoryBreakdown[item.category] = { approved: 0, spent: 0 };
+      }
+      categoryBreakdown[item.category].approved += item.estimatedCost;
+    }
+  }
+  for (const e of expenditures) {
+    const req = requests.find((r) => r.id === e.budgetRequestId);
+    const lineItem = req?.items.find((i) => i.id === e.lineItemId);
+    if (lineItem) {
+      if (!categoryBreakdown[lineItem.category]) {
+        categoryBreakdown[lineItem.category] = { approved: 0, spent: 0 };
+      }
+      categoryBreakdown[lineItem.category].spent += e.actualAmount;
+    }
+  }
+
+  const selectedReqItems = expForm.budgetRequestId
+    ? (requests.find((r) => r.id === expForm.budgetRequestId)?.items ?? [])
+    : [];
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Budget Management</h1>
-        <p className="text-slate-500 text-sm">
+        <h1 className="text-2xl font-bold text-foreground">
+          Budget Management
+        </h1>
+        <p className="text-muted-foreground text-sm">
           Review and manage department budget requests, expenditures, and
           procurement
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
             label: "Total Requested (₦)",
-            value: totalRequested.toLocaleString(),
+            value: `₦${totalRequested.toLocaleString()}`,
             color: "bg-blue-50",
             icon: <FileText size={18} className="text-blue-600" />,
           },
           {
             label: "Total Approved (₦)",
-            value: totalApproved.toLocaleString(),
+            value: `₦${totalApproved.toLocaleString()}`,
             color: "bg-green-50",
             icon: <CheckCircle size={18} className="text-green-600" />,
           },
           {
             label: "Total Spent (₦)",
-            value: totalSpent.toLocaleString(),
+            value: `₦${totalSpent.toLocaleString()}`,
             color: "bg-purple-50",
             icon: <DollarSign size={18} className="text-purple-600" />,
           },
           {
             label: "Variance (₦)",
-            value: variance.toLocaleString(),
+            value: `₦${variance.toLocaleString()}`,
             color: variance >= 0 ? "bg-cyan-50" : "bg-red-50",
             icon: (
               <BarChart2
@@ -329,12 +441,14 @@ export function BudgetManagement() {
             <CardContent
               className={`p-4 flex items-center gap-3 ${card.color} rounded-lg`}
             >
-              <div className="p-2 bg-white rounded-lg shadow-sm">
+              <div className="p-2 bg-card rounded-lg shadow-sm">
                 {card.icon}
               </div>
               <div>
-                <p className="text-xs text-slate-500">{card.label}</p>
-                <p className="text-xl font-bold text-slate-800">{card.value}</p>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold text-foreground">
+                  {card.value}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -350,8 +464,8 @@ export function BudgetManagement() {
             onClick={() => setActiveTab(t.key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === t.key
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
             data-ocid={`budget.admin.tab.${t.key}`}
           >
@@ -360,6 +474,7 @@ export function BudgetManagement() {
         ))}
       </div>
 
+      {/* REQUESTS TAB */}
       {activeTab === "requests" && (
         <Card>
           <CardHeader>
@@ -380,7 +495,7 @@ export function BudgetManagement() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-8 text-xs w-36">
+                  <SelectTrigger className="h-8 text-xs w-40">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -397,14 +512,14 @@ export function BudgetManagement() {
           </CardHeader>
           <CardContent className="p-0">
             {filtered.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
+              <div className="text-center py-12 text-muted-foreground">
                 <FileText size={36} className="mx-auto mb-2 opacity-40" />
                 <p>No budget requests found.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+                  <thead className="bg-muted/30 border-b">
                     <tr>
                       {[
                         "ID",
@@ -419,7 +534,7 @@ export function BudgetManagement() {
                       ].map((h) => (
                         <th
                           key={h}
-                          className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase"
+                          className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase"
                         >
                           {h}
                         </th>
@@ -436,10 +551,10 @@ export function BudgetManagement() {
                       return (
                         <tr
                           key={r.id}
-                          className="border-b last:border-0 hover:bg-slate-50"
+                          className="border-b last:border-0 hover:bg-muted/20"
                           data-ocid={`budget.admin.row.${r.id}`}
                         >
-                          <td className="px-3 py-2 text-xs font-mono text-blue-600">
+                          <td className="px-3 py-2 text-xs font-mono text-primary">
                             {r.id}
                           </td>
                           <td className="px-3 py-2">{r.department}</td>
@@ -471,7 +586,7 @@ export function BudgetManagement() {
                             </span>
                           </td>
                           <td className="px-3 py-2">
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 flex-wrap">
                               {r.status === "submitted" && (
                                 <>
                                   <Button
@@ -484,6 +599,18 @@ export function BudgetManagement() {
                                     }}
                                   >
                                     Finance ✓
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-amber-600 border-amber-300 hover:bg-amber-50 text-xs h-7"
+                                    onClick={() => {
+                                      setReviewId(r.id);
+                                      setReviewAction("revision");
+                                    }}
+                                  >
+                                    <RefreshCw size={11} className="mr-1" />{" "}
+                                    Revise
                                   </Button>
                                   <Button
                                     size="sm"
@@ -537,6 +664,7 @@ export function BudgetManagement() {
         </Card>
       )}
 
+      {/* EXPENDITURE TAB */}
       {activeTab === "expenditure" && (
         <Card>
           <CardHeader>
@@ -544,7 +672,7 @@ export function BudgetManagement() {
               <CardTitle className="text-base">Expenditure Tracking</CardTitle>
               <Button
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90"
                 onClick={() => setExpDialog(true)}
                 data-ocid="budget.expenditure.new"
               >
@@ -554,17 +682,18 @@ export function BudgetManagement() {
           </CardHeader>
           <CardContent className="p-0">
             {expenditures.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 text-sm">
+              <div className="text-center py-10 text-muted-foreground text-sm">
                 No expenditures recorded yet.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+                  <thead className="bg-muted/30 border-b">
                     <tr>
                       {[
                         "ID",
                         "Budget Request",
+                        "Line Item",
                         "Description",
                         "Amount (₦)",
                         "Recorded At",
@@ -572,7 +701,7 @@ export function BudgetManagement() {
                       ].map((h) => (
                         <th
                           key={h}
-                          className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase"
+                          className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase"
                         >
                           {h}
                         </th>
@@ -583,19 +712,22 @@ export function BudgetManagement() {
                     {expenditures.map((e) => (
                       <tr
                         key={e.id}
-                        className="border-b last:border-0 hover:bg-slate-50"
+                        className="border-b last:border-0 hover:bg-muted/20"
                       >
-                        <td className="px-3 py-2 text-xs font-mono text-blue-600">
+                        <td className="px-3 py-2 text-xs font-mono text-primary">
                           {e.id}
                         </td>
                         <td className="px-3 py-2 text-xs font-mono">
                           {e.budgetRequestId}
                         </td>
+                        <td className="px-3 py-2 text-xs">
+                          {e.lineItemLabel || "—"}
+                        </td>
                         <td className="px-3 py-2">{e.description}</td>
                         <td className="px-3 py-2 font-medium text-purple-700">
                           ₦{e.actualAmount.toLocaleString()}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-500">
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
                           {new Date(e.recordedAt).toLocaleDateString()}
                         </td>
                         <td className="px-3 py-2 text-xs">{e.recordedBy}</td>
@@ -609,6 +741,7 @@ export function BudgetManagement() {
         </Card>
       )}
 
+      {/* PROCUREMENT TAB */}
       {activeTab === "procurement" && (
         <Card>
           <CardHeader>
@@ -616,13 +749,13 @@ export function BudgetManagement() {
           </CardHeader>
           <CardContent className="p-0">
             {procItems.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 text-sm">
+              <div className="text-center py-10 text-muted-foreground text-sm">
                 No procurement requests submitted yet.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+                  <thead className="bg-muted/30 border-b">
                     <tr>
                       {[
                         "ID",
@@ -636,7 +769,7 @@ export function BudgetManagement() {
                       ].map((h) => (
                         <th
                           key={h}
-                          className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase"
+                          className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase"
                         >
                           {h}
                         </th>
@@ -654,10 +787,10 @@ export function BudgetManagement() {
                       return (
                         <tr
                           key={p.id}
-                          className="border-b last:border-0 hover:bg-slate-50"
+                          className="border-b last:border-0 hover:bg-muted/20"
                           data-ocid={`budget.procurement.row.${p.id}`}
                         >
-                          <td className="px-3 py-2 text-xs font-mono text-blue-600">
+                          <td className="px-3 py-2 text-xs font-mono text-primary">
                             {p.id}
                           </td>
                           <td className="px-3 py-2">{p.department}</td>
@@ -666,7 +799,7 @@ export function BudgetManagement() {
                           <td className="px-3 py-2 font-medium">
                             ₦{p.totalCost.toLocaleString()}
                           </td>
-                          <td className="px-3 py-2 text-xs text-slate-500">
+                          <td className="px-3 py-2 text-xs text-muted-foreground">
                             {p.supplier || "—"}
                           </td>
                           <td className="px-3 py-2">
@@ -727,16 +860,27 @@ export function BudgetManagement() {
         </Card>
       )}
 
+      {/* REPORTS TAB */}
       {activeTab === "reports" && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                Institution Budget Summary
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">
+                  Budget Utilization Report
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={printReport}
+                  data-ocid="budget.reports.print"
+                >
+                  <Printer size={14} className="mr-1" /> Print PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-4 gap-4 mb-5">
                 {[
                   {
                     label: "Total Requested",
@@ -763,15 +907,21 @@ export function BudgetManagement() {
                     key={m.label}
                     className="border rounded-lg p-3 text-center"
                   >
-                    <p className="text-xs text-slate-500 mb-1">{m.label}</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {m.label}
+                    </p>
                     <p className={`text-lg font-bold ${m.color}`}>{m.value}</p>
                   </div>
                 ))}
               </div>
-              {/* Department Comparison */}
-              <div className="overflow-x-auto">
+
+              {/* Department Utilization Table */}
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                By Department
+              </h3>
+              <div className="overflow-x-auto mb-5">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+                  <thead className="bg-muted/30 border-b">
                     <tr>
                       {[
                         "Department",
@@ -780,10 +930,11 @@ export function BudgetManagement() {
                         "Spent (₦)",
                         "Variance (₦)",
                         "Utilization %",
+                        "Status",
                       ].map((h) => (
                         <th
                           key={h}
-                          className="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase"
+                          className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase"
                         >
                           {h}
                         </th>
@@ -797,10 +948,16 @@ export function BudgetManagement() {
                         d.approved > 0
                           ? Math.round((d.spent / d.approved) * 100)
                           : 0;
+                      const budgetStatus =
+                        util > 100
+                          ? "Over Budget"
+                          : util > 90
+                            ? "Near Limit"
+                            : "On Budget";
                       return (
                         <tr
                           key={d.dept}
-                          className="border-b last:border-0 hover:bg-slate-50"
+                          className="border-b last:border-0 hover:bg-muted/20"
                         >
                           <td className="px-3 py-2 font-medium">{d.dept}</td>
                           <td className="px-3 py-2">{d.count}</td>
@@ -817,12 +974,10 @@ export function BudgetManagement() {
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-slate-200 rounded-full h-2">
+                              <div className="flex-1 bg-muted rounded-full h-2">
                                 <div
-                                  className={`h-2 rounded-full ${util > 90 ? "bg-red-500" : util > 70 ? "bg-amber-500" : "bg-green-500"}`}
-                                  style={{
-                                    width: `${Math.min(util, 100)}%`,
-                                  }}
+                                  className={`h-2 rounded-full ${util > 100 ? "bg-red-500" : util > 90 ? "bg-amber-500" : "bg-green-500"}`}
+                                  style={{ width: `${Math.min(util, 100)}%` }}
                                 />
                               </div>
                               <span className="text-xs font-medium">
@@ -830,12 +985,105 @@ export function BudgetManagement() {
                               </span>
                             </div>
                           </td>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                budgetStatus === "Over Budget"
+                                  ? "bg-red-100 text-red-700"
+                                  : budgetStatus === "Near Limit"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {budgetStatus}
+                            </span>
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
+
+              {/* Category Breakdown */}
+              {Object.keys(categoryBreakdown).length > 0 && (
+                <>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">
+                    By Category (Approved Budgets)
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/30 border-b">
+                        <tr>
+                          {[
+                            "Category",
+                            "Approved (₦)",
+                            "Spent (₦)",
+                            "Variance (₦)",
+                            "Utilization %",
+                          ].map((h) => (
+                            <th
+                              key={h}
+                              className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(categoryBreakdown).map(
+                          ([cat, data]) => {
+                            const v = data.approved - data.spent;
+                            const util =
+                              data.approved > 0
+                                ? Math.round((data.spent / data.approved) * 100)
+                                : 0;
+                            return (
+                              <tr
+                                key={cat}
+                                className="border-b last:border-0 hover:bg-muted/20"
+                              >
+                                <td className="px-3 py-2 font-medium">
+                                  {categoryLabels[
+                                    cat as keyof typeof categoryLabels
+                                  ] ?? cat}
+                                </td>
+                                <td className="px-3 py-2 text-green-700">
+                                  ₦{data.approved.toLocaleString()}
+                                </td>
+                                <td className="px-3 py-2 text-purple-700">
+                                  ₦{data.spent.toLocaleString()}
+                                </td>
+                                <td
+                                  className={`px-3 py-2 font-medium ${v >= 0 ? "text-cyan-700" : "text-red-600"}`}
+                                >
+                                  ₦{v.toLocaleString()}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-muted rounded-full h-2">
+                                      <div
+                                        className={`h-2 rounded-full ${util > 100 ? "bg-red-500" : util > 70 ? "bg-amber-500" : "bg-green-500"}`}
+                                        style={{
+                                          width: `${Math.min(util, 100)}%`,
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="text-xs font-medium">
+                                      {util}%
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          },
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -850,23 +1098,27 @@ export function BudgetManagement() {
                 ? "Approve Budget Request"
                 : reviewAction === "finance_approve"
                   ? "Finance Officer Approval"
-                  : "Reject Budget Request"}
+                  : reviewAction === "revision"
+                    ? "Request Revision"
+                    : "Reject Budget Request"}
             </DialogTitle>
           </DialogHeader>
           {reviewedReq && (
             <div className="space-y-3">
-              <div className="bg-slate-50 rounded p-3 text-sm">
+              <div className="bg-muted/30 rounded p-3 text-sm space-y-1">
                 <p>
-                  <span className="text-slate-500">Dept:</span>{" "}
+                  <span className="text-muted-foreground">Dept:</span>{" "}
                   {reviewedReq.department}
                 </p>
                 <p>
-                  <span className="text-slate-500">Session:</span>{" "}
+                  <span className="text-muted-foreground">Session:</span>{" "}
                   {reviewedReq.session}
                 </p>
                 <p>
-                  <span className="text-slate-500">Total Requested:</span> ₦
-                  {reviewedReq.totalEstimated.toLocaleString()}
+                  <span className="text-muted-foreground">
+                    Total Requested:
+                  </span>{" "}
+                  ₦{reviewedReq.totalEstimated.toLocaleString()}
                 </p>
               </div>
               {reviewAction === "approve" && (
@@ -877,14 +1129,21 @@ export function BudgetManagement() {
                     className="mt-1"
                     value={reviewAmount}
                     onChange={(e) => setReviewAmount(e.target.value)}
+                    data-ocid="budget.admin.review.amount"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Adjust if approving less than requested. Leave as-is to
+                    approve full amount.
+                  </p>
                 </div>
               )}
               <div>
                 <Label>
                   {reviewAction === "reject"
-                    ? "Reason for Rejection"
-                    : "Comment (optional)"}
+                    ? "Reason for Rejection *"
+                    : reviewAction === "revision"
+                      ? "Revision Instructions *"
+                      : "Comment (optional)"}
                 </Label>
                 <Textarea
                   className="mt-1"
@@ -892,8 +1151,10 @@ export function BudgetManagement() {
                   onChange={(e) => setReviewComment(e.target.value)}
                   placeholder={
                     reviewAction === "reject"
-                      ? "Explain why..."
-                      : "Optional comment..."
+                      ? "Explain reason for rejection..."
+                      : reviewAction === "revision"
+                        ? "Explain what changes are needed..."
+                        : "Optional comment for HOD..."
                   }
                 />
               </div>
@@ -907,12 +1168,20 @@ export function BudgetManagement() {
               className={
                 reviewAction === "reject"
                   ? "bg-red-600 hover:bg-red-700"
-                  : "bg-green-600 hover:bg-green-700"
+                  : reviewAction === "revision"
+                    ? "bg-amber-500 hover:bg-amber-600"
+                    : "bg-green-600 hover:bg-green-700"
               }
               onClick={submitReview}
               data-ocid="budget.admin.review.submit"
             >
-              Confirm
+              {reviewAction === "approve"
+                ? "Approve"
+                : reviewAction === "finance_approve"
+                  ? "Forward to Admin"
+                  : reviewAction === "revision"
+                    ? "Request Revision"
+                    : "Reject"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -930,7 +1199,11 @@ export function BudgetManagement() {
               <Select
                 value={expForm.budgetRequestId}
                 onValueChange={(v) =>
-                  setExpForm((f) => ({ ...f, budgetRequestId: v }))
+                  setExpForm((f) => ({
+                    ...f,
+                    budgetRequestId: v,
+                    lineItemId: "",
+                  }))
                 }
               >
                 <SelectTrigger className="mt-1">
@@ -947,6 +1220,30 @@ export function BudgetManagement() {
                 </SelectContent>
               </Select>
             </div>
+            {selectedReqItems.length > 0 && (
+              <div>
+                <Label>Line Item (optional)</Label>
+                <Select
+                  value={expForm.lineItemId}
+                  onValueChange={(v) =>
+                    setExpForm((f) => ({ ...f, lineItemId: v }))
+                  }
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select line item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">General</SelectItem>
+                    {selectedReqItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {categoryLabels[item.category]} — {item.description} (₦
+                        {item.estimatedCost.toLocaleString()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Description</Label>
               <Input
@@ -975,7 +1272,7 @@ export function BudgetManagement() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={submitExpenditure}
               data-ocid="budget.expenditure.submit"
             >
@@ -1002,13 +1299,13 @@ export function BudgetManagement() {
           </DialogHeader>
           {procReviewed && (
             <div className="space-y-3">
-              <div className="bg-slate-50 rounded p-3 text-sm space-y-1">
+              <div className="bg-muted/30 rounded p-3 text-sm space-y-1">
                 <p>
-                  <span className="text-slate-500">Item:</span>{" "}
+                  <span className="text-muted-foreground">Item:</span>{" "}
                   {procReviewed.itemDescription}
                 </p>
                 <p>
-                  <span className="text-slate-500">Total:</span> ₦
+                  <span className="text-muted-foreground">Total:</span> ₦
                   {procReviewed.totalCost.toLocaleString()}
                 </p>
               </div>

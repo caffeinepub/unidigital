@@ -415,23 +415,107 @@ const ALL_JAMB_STUDENTS: JambStudent[] = [
   ...HKE_STUDENTS,
 ];
 
+// ─── localStorage CRUD for JAMB students (v2) ────────────────────────────────
+
+const JAMB_LS_KEY = "unidigital_jamb_students_v2";
+
+function loadJambFromStorage(): JambStudent[] {
+  try {
+    const raw = localStorage.getItem(JAMB_LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveJambToStorage(data: JambStudent[]): void {
+  localStorage.setItem(JAMB_LS_KEY, JSON.stringify(data));
+}
+
+function ensureJambSeeded(): void {
+  const existing = loadJambFromStorage();
+  if (existing.length === 0) {
+    saveJambToStorage(ALL_JAMB_STUDENTS);
+  }
+}
+
 export function getDeptStudents(deptCode: string): JambStudent[] {
-  return ALL_JAMB_STUDENTS.filter((s) => s.deptCode === deptCode);
+  ensureJambSeeded();
+  return loadJambFromStorage().filter((s) => s.deptCode === deptCode);
 }
 
 export function getAllJambStudents(): JambStudent[] {
-  return ALL_JAMB_STUDENTS;
+  ensureJambSeeded();
+  return loadJambFromStorage();
 }
 
 export function getJambStats(): {
   total: number;
   perDept: Record<string, number>;
 } {
+  const all = getAllJambStudents();
   const perDept: Record<string, number> = {};
   for (const d of DEPARTMENTS) {
-    perDept[d.code] = getDeptStudents(d.code).length;
+    perDept[d.code] = all.filter((s) => s.deptCode === d.code).length;
   }
-  return { total: ALL_JAMB_STUDENTS.length, perDept };
+  return { total: all.length, perDept };
+}
+
+/** Generate next matric number for a department */
+export function generateMatricNumber(deptCode: string): string {
+  const all = getAllJambStudents();
+  const deptStudents = all.filter((s) => s.deptCode === deptCode);
+  const next = deptStudents.length + 1;
+  return `FUEK/SCI/2025/${deptCode}/${String(next).padStart(3, "0")}`;
+}
+
+/** Add a new JAMB student */
+export function addJambStudent(
+  student: Omit<JambStudent, "id" | "sn" | "matricNumber">,
+): JambStudent {
+  ensureJambSeeded();
+  const all = loadJambFromStorage();
+  const deptStudents = all.filter((s) => s.deptCode === student.deptCode);
+  const sn = deptStudents.length + 1;
+  const newStudent: JambStudent = {
+    ...student,
+    id: `jamb-${student.deptCode.toLowerCase()}-${String(sn).padStart(3, "0")}-${Date.now()}`,
+    sn,
+    matricNumber: generateMatricNumber(student.deptCode),
+  };
+  saveJambToStorage([...all, newStudent]);
+  return newStudent;
+}
+
+/** Update an existing JAMB student */
+export function updateJambStudent(updated: JambStudent): void {
+  ensureJambSeeded();
+  const all = loadJambFromStorage();
+  const idx = all.findIndex((s) => s.id === updated.id);
+  if (idx >= 0) {
+    all[idx] = updated;
+    saveJambToStorage(all);
+  }
+}
+
+/** Delete a JAMB student by id */
+export function deleteJambStudent(id: string): void {
+  ensureJambSeeded();
+  const all = loadJambFromStorage().filter((s) => s.id !== id);
+  saveJambToStorage(all);
+}
+
+/** Check if JAMB Reg No is already used (excluding current id) */
+export function isJambRegNoDuplicate(
+  jambRegNo: string,
+  excludeId?: string,
+): boolean {
+  const all = getAllJambStudents();
+  return all.some(
+    (s) =>
+      s.jambRegNo.toLowerCase() === jambRegNo.toLowerCase() &&
+      s.id !== excludeId,
+  );
 }
 
 export function initJambStudents(): void {

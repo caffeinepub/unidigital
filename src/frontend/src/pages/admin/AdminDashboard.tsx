@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { GatedRoute } from "../../components/GatedRoute";
 import { StatCard } from "../../components/StatCard";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -61,6 +62,7 @@ import { CourseCatalog } from "../shared/CourseCatalog";
 import { PassFailureLists } from "../shared/PassFailureLists";
 import { PromotionResults } from "../shared/PromotionResults";
 import { StaffDirectory } from "../shared/StaffDirectory";
+import { StudentProfilePortal } from "../shared/StudentProfilePortal";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AIBulkUploadRegistration } from "./AIBulkUploadRegistration";
 import { AIDashboard } from "./AIDashboard";
@@ -78,6 +80,7 @@ import { BudgetManagement } from "./BudgetManagement";
 import { BulkRegistration } from "./BulkRegistration";
 import { CBTAnalytics } from "./CBTAnalytics";
 import { CBTResitManager } from "./CBTResitManager";
+import { CertificateCourses } from "./CertificateCourses";
 import { ClearanceLetter } from "./ClearanceLetter";
 import { CombinationCourses } from "./CombinationCourses";
 import { ComplaintsAdmin } from "./ComplaintsAdmin";
@@ -100,10 +103,12 @@ import { HostelAdmin } from "./HostelAdmin";
 import { HostelAllocationMatrix } from "./HostelAllocationMatrix";
 import { HostelRoomInventory } from "./HostelRoomInventory";
 import { HostelTransferRequests } from "./HostelTransferRequests";
+import { IDCardGenerator } from "./IDCardGenerator";
 import { InstitutionSettings } from "./InstitutionSettings";
 import { InternalMemoSystem } from "./InternalMemoSystem";
 import { JAMBAdmissionPortal } from "./JAMBAdmissionPortal";
 import { LibraryAdmin } from "./LibraryAdmin";
+import { MalpracticeReports } from "./MalpracticeReports";
 import { ManualRegistration } from "./ManualRegistration";
 import { NoticeBoard } from "./NoticeBoard";
 import { ProgressionAdmin } from "./ProgressionAdmin";
@@ -204,7 +209,11 @@ type Page =
   | "system-admin"
   | "course-catalog"
   | "announcement-view"
-  | "communication-center-admin";
+  | "communication-center-admin"
+  | "certificate-courses"
+  | "malpractice-reports"
+  | "id-cards"
+  | "student-profiles";
 
 interface AdminDashboardProps {
   activePage: Page;
@@ -1340,8 +1349,18 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "timetable-admin") return <TimetableAdmin />;
   if (activePage === "attendance-admin") return <AttendanceAdmin />;
   if (activePage === "documents-admin") return <DocumentAdmin />;
-  if (activePage === "hostel-admin") return <HostelAdmin />;
-  if (activePage === "library-admin") return <LibraryAdmin />;
+  if (activePage === "hostel-admin")
+    return (
+      <GatedRoute pageKey="hostel-admin">
+        <HostelAdmin />
+      </GatedRoute>
+    );
+  if (activePage === "library-admin")
+    return (
+      <GatedRoute pageKey="library-admin">
+        <LibraryAdmin />
+      </GatedRoute>
+    );
   if (activePage === "academic-calendar") return <AcademicCalendar isAdmin />;
   if (activePage === "exam-schedule-admin") return <ExamScheduleAdmin />;
   if (activePage === "announcements-admin") return <AnnouncementsAdmin />;
@@ -1387,8 +1406,18 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "hostel-allocation") return <HostelAllocationMatrix />;
   if (activePage === "hostel-transfers") return <HostelTransferRequests />;
   if (activePage === "timetable-conflicts") return <TimetableConflictManager />;
-  if (activePage === "cbt-analytics") return <CBTAnalytics />;
-  if (activePage === "cbt-resit") return <CBTResitManager />;
+  if (activePage === "cbt-analytics")
+    return (
+      <GatedRoute pageKey="cbt-analytics">
+        <CBTAnalytics />
+      </GatedRoute>
+    );
+  if (activePage === "cbt-resit")
+    return (
+      <GatedRoute pageKey="cbt-resit">
+        <CBTResitManager />
+      </GatedRoute>
+    );
   if (activePage === "registration-management")
     return <RegistrationManagementAdmin />;
   if (activePage === "manual-registration") return <ManualRegistration />;
@@ -1399,13 +1428,17 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "registration-doc-archive")
     return <RegistrationDocumentArchive />;
   if (activePage === "jamb-portal") return <JAMBAdmissionPortal />;
+  if (activePage === "student-profiles")
+    return <StudentProfilePortal userRole="admin" />;
   // New v22 modules
   if (activePage === "fee-management") return <FeeManagement />;
+  if (activePage === "id-cards") return <IDCardGenerator />;
   if (activePage === "academic-calendar-admin")
     return <AcademicCalendarAdmin />;
   if (activePage === "course-management") return <CourseManagement />;
   if (activePage === "examination-management") return <ExaminationManagement />;
   if (activePage === "staff-management") return <StaffManagement />;
+  if (activePage === "malpractice-reports") return <MalpracticeReports />;
   if (activePage === "budget-management") return <BudgetManagement />;
   if (activePage === "scholarship-management") return <ScholarshipManagement />;
   if (activePage === "notice-board") return <NoticeBoard />;
@@ -1418,5 +1451,11 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "announcement-view") return <AnnouncementView />;
   if (activePage === "communication-center-admin")
     return <CommunicationCenter />;
+  if (activePage === "certificate-courses")
+    return (
+      <GatedRoute pageKey="certificate-courses">
+        <CertificateCourses />
+      </GatedRoute>
+    );
   return null;
 }

@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   Award,
   BarChart3,
@@ -13,6 +14,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   ClipboardList,
+  CreditCard,
   Database,
   DollarSign,
   Download,
@@ -48,11 +50,15 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ModuleDisabledScreen } from "../components/ModuleDisabledScreen";
+import { useModuleGating } from "../contexts/ModuleGatingContext";
 import { useNotifications } from "../contexts/NotificationsContext";
 import { cn } from "../lib/utils";
+import { getPhoto } from "../utils/auditUtils";
+import { getLocalStaff, getLocalStudents } from "../utils/sampleData";
 import { OfflineBanner } from "./OfflineBanner";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -313,6 +319,11 @@ const navByRole: Record<string, NavItem[]> = {
       key: "fee-management",
     },
     {
+      label: "ID Cards",
+      icon: <CreditCard size={18} />,
+      key: "id-cards",
+    },
+    {
       label: "Course Management",
       icon: <BookOpen size={18} />,
       key: "course-management",
@@ -321,6 +332,11 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Exam Management",
       icon: <ClipboardCheck size={18} />,
       key: "examination-management",
+    },
+    {
+      label: "Malpractice Reports",
+      icon: <Shield size={18} />,
+      key: "malpractice-reports",
     },
     {
       label: "Staff Management",
@@ -376,6 +392,26 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Communication",
       icon: <MessageSquare size={18} />,
       key: "communication-center-admin",
+    },
+    {
+      label: "Certificate Courses",
+      icon: <Award size={18} />,
+      key: "certificate-courses",
+    },
+    {
+      label: "Login Audit Log",
+      icon: <Shield size={18} />,
+      key: "login-audit-log",
+    },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
+    },
+    {
+      label: "Student Profiles",
+      icon: <Users size={18} />,
+      key: "student-profiles",
     },
   ],
   student: [
@@ -529,6 +565,21 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <MessageSquare size={18} />,
       key: "communication-center",
     },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
+    },
+    {
+      label: "My Certificates",
+      icon: <Award size={18} />,
+      key: "my-certificates",
+    },
+    {
+      label: "My Profile",
+      icon: <UserCheck size={18} />,
+      key: "student-profile",
+    },
   ],
   lecturer: [
     {
@@ -620,6 +671,21 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <MessageSquare size={18} />,
       key: "communication-center",
     },
+    {
+      label: "Certificate Courses",
+      icon: <Award size={18} />,
+      key: "certificate-courses",
+    },
+    {
+      label: "My Profile",
+      icon: <UserCheck size={18} />,
+      key: "staff-profile",
+    },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
+    },
   ],
   bursary: [
     {
@@ -672,6 +738,16 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <MessageSquare size={18} />,
       key: "communication-center",
     },
+    {
+      label: "My Profile",
+      icon: <UserCheck size={18} />,
+      key: "staff-profile",
+    },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
+    },
   ],
   hr: [
     {
@@ -720,6 +796,21 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Messages",
       icon: <MessageSquare size={18} />,
       key: "communication-center",
+    },
+    {
+      label: "My Profile",
+      icon: <UserCheck size={18} />,
+      key: "staff-profile",
+    },
+    {
+      label: "Student Profiles",
+      icon: <GraduationCap size={18} />,
+      key: "student-profiles",
+    },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
     },
   ],
   hod: [
@@ -805,6 +896,11 @@ const navByRole: Record<string, NavItem[]> = {
       key: "budget-request",
     },
     {
+      label: "Curriculum Management",
+      icon: <BookMarked size={18} />,
+      key: "curriculum-management",
+    },
+    {
       label: "Course Catalog",
       icon: <BookMarked size={18} />,
       key: "course-catalog",
@@ -819,6 +915,21 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Megaphone size={18} />,
       key: "announcement-view",
     },
+    {
+      label: "My Profile",
+      icon: <UserCheck size={18} />,
+      key: "staff-profile",
+    },
+    {
+      label: "Student Profiles",
+      icon: <GraduationCap size={18} />,
+      key: "student-profiles",
+    },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
+    },
   ],
   alumni: [
     {
@@ -830,6 +941,11 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Job Board", icon: <Briefcase size={18} />, key: "jobs" },
     { label: "Events", icon: <Calendar size={18} />, key: "events" },
     { label: "My Profile", icon: <Settings size={18} />, key: "profile" },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
+    },
   ],
   parent: [
     {
@@ -843,6 +959,11 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Announcements",
       icon: <Megaphone size={18} />,
       key: "announcements",
+    },
+    {
+      label: "Login Activity",
+      icon: <Activity size={18} />,
+      key: "login-activity",
     },
   ],
 };
@@ -892,6 +1013,10 @@ export function AppLayout({
 }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [sidebarPhoto, setSidebarPhoto] = useState<string | null>(null);
+
+  const { isModuleEnabled } = useModuleGating();
+  const isAdmin = role === "admin";
 
   const {
     notifications: allNotifications,
@@ -899,7 +1024,39 @@ export function AppLayout({
     markAllRead,
   } = useNotifications();
 
-  const navItems = navByRole[role] ?? navByRole.admin;
+  // Load the profile photo for the current user's sidebar avatar
+  useEffect(() => {
+    let photoId: string | null = null;
+    if (role === "admin") {
+      photoId = "admin_photo";
+    } else if (role === "student") {
+      const students = getLocalStudents();
+      const matched =
+        students.find((s) => s.name.toLowerCase() === userName.toLowerCase()) ??
+        students.find((s) =>
+          s.email
+            ?.toLowerCase()
+            .includes(userName.split(" ")[0]?.toLowerCase() ?? ""),
+        );
+      if (matched) photoId = matched.matricNumber;
+    } else {
+      // lecturer, hod, hr, bursary — find staff by name
+      const staff = getLocalStaff();
+      const matched = staff.find(
+        (s) => s.name.toLowerCase() === userName.toLowerCase(),
+      );
+      if (matched) photoId = matched.staffId;
+    }
+    setSidebarPhoto(photoId ? getPhoto(photoId) : null);
+  }, [role, userName]);
+
+  const rawNavItems = navByRole[role] ?? navByRole.admin;
+
+  // For non-admin users, filter out disabled module nav items
+  // For admin users, show all items but add a "Disabled" badge
+  const navItems = isAdmin
+    ? rawNavItems
+    : rawNavItems.filter((item) => isModuleEnabled(item.key));
   const notifications = allNotifications.filter(
     (n) => n.role === role || n.role === "all",
   );
@@ -928,33 +1085,59 @@ export function AppLayout({
         </div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            data-ocid={`nav.${item.key}.link`}
-            onClick={() => {
-              onNavigate(item.key);
-              setMobileOpen(false);
-            }}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors min-h-[44px]",
-              activePage === item.key
-                ? "bg-blue-600 text-white"
-                : "text-slate-300 hover:bg-slate-800 hover:text-white",
-            )}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-            {activePage === item.key && (
-              <ChevronRight size={14} className="ml-auto" />
-            )}
-          </button>
-        ))}
+        {navItems.map((item) => {
+          const disabled = isAdmin && !isModuleEnabled(item.key);
+          return (
+            <button
+              key={item.key}
+              type="button"
+              data-ocid={`nav.${item.key}.link`}
+              onClick={() => {
+                onNavigate(item.key);
+                setMobileOpen(false);
+              }}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors min-h-[44px]",
+                activePage === item.key
+                  ? "bg-blue-600 text-white"
+                  : disabled
+                    ? "text-slate-500 hover:bg-slate-800 hover:text-white"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white",
+              )}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+              {disabled && (
+                <span className="ml-auto text-[9px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded">
+                  OFF
+                </span>
+              )}
+              {!disabled && activePage === item.key && (
+                <ChevronRight size={14} className="ml-auto" />
+              )}
+            </button>
+          );
+        })}
       </nav>
       <div className="px-4 py-4 border-t border-slate-700">
-        <div className="flex items-center gap-3 mb-3">
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate("my-profile");
+            setMobileOpen(false);
+          }}
+          className="flex items-center gap-3 mb-3 w-full text-left rounded-lg hover:bg-slate-800 px-1 py-1 transition-colors"
+          aria-label="Edit my profile"
+          data-ocid="nav.my-profile.link"
+        >
           <Avatar className="w-8 h-8 flex-shrink-0">
+            {sidebarPhoto && (
+              <AvatarImage
+                src={sidebarPhoto}
+                alt={userName}
+                className="object-cover"
+              />
+            )}
             <AvatarFallback className="bg-blue-600 text-white text-xs">
               {userName
                 .split(" ")
@@ -966,9 +1149,11 @@ export function AppLayout({
           </Avatar>
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">{userName}</p>
-            <p className="text-xs text-slate-400">{roleBadge[role] ?? role}</p>
+            <p className="text-xs text-slate-400">
+              {roleBadge[role] ?? role} · Edit Profile
+            </p>
           </div>
-        </div>
+        </button>
         <Button
           variant="ghost"
           size="sm"
@@ -1126,7 +1311,16 @@ export function AppLayout({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {!isAdmin && !isModuleEnabled(activePage) ? (
+            <ModuleDisabledScreen
+              moduleName={activePage}
+              onBack={() => window.history.back()}
+            />
+          ) : (
+            children
+          )}
+        </main>
       </div>
     </div>
   );

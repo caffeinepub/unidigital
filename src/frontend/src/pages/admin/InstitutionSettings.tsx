@@ -80,6 +80,7 @@ interface SystemToggles {
   cbtExamsEnabled: boolean;
   studentPortalActive: boolean;
   staffPortalActive: boolean;
+  certificateCoursesEnabled: boolean;
 }
 
 interface SecurityConfig {
@@ -156,6 +157,7 @@ export function InstitutionSettings() {
       cbtExamsEnabled: true,
       studentPortalActive: true,
       staffPortalActive: true,
+      certificateCoursesEnabled: true,
     },
   );
 
@@ -684,6 +686,11 @@ export function InstitutionSettings() {
                       key: "staffPortalActive",
                       label: "Staff Portal",
                       desc: "Lecturer and HOD portals are accessible",
+                    },
+                    {
+                      key: "certificateCoursesEnabled",
+                      label: "Certificate Courses",
+                      desc: "Short-term certificate programmes (3 batches/year) are active",
                     },
                   ] as {
                     key: keyof SystemToggles;

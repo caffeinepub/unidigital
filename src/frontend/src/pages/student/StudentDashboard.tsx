@@ -1,5 +1,6 @@
 import { Award, Bell, BookOpen, DollarSign, GraduationCap } from "lucide-react";
 import { useEffect, useState } from "react";
+import { GatedRoute } from "../../components/GatedRoute";
 import { StatCard } from "../../components/StatCard";
 import { ExamTaking } from "../../components/cbt/ExamTaking";
 import { Badge } from "../../components/ui/badge";
@@ -41,6 +42,7 @@ import { FeePayment } from "./FeePayment";
 import { GPASummary } from "./GPASummary";
 import { GraduationStatus } from "./GraduationStatus";
 import { HostelApplication } from "./HostelApplication";
+import { MyCertificates } from "./MyCertificates";
 import { PaymentHistory } from "./PaymentHistory";
 import { ResultSlip } from "./ResultSlip";
 import { ScholarshipApplication } from "./ScholarshipApplication";
@@ -94,7 +96,8 @@ type Page =
   | "deferment"
   | "course-catalog"
   | "announcements-view"
-  | "communication-center";
+  | "communication-center"
+  | "my-certificates";
 
 interface StudentDashboardProps {
   activePage: Page;
@@ -579,7 +582,11 @@ export function StudentDashboard({
     );
 
   if (activePage === "registration")
-    return <CourseRegistration studentMatric={studentId} />;
+    return (
+      <GatedRoute pageKey="registration">
+        <CourseRegistration studentMatric={studentId} />
+      </GatedRoute>
+    );
 
   if (activePage === "timetable")
     return <StudentTimetable studentMatric={studentId} />;
@@ -594,18 +601,31 @@ export function StudentDashboard({
 
   if (activePage === "hostel")
     return (
-      <HostelApplication studentMatric={studentId} studentName={studentName} />
+      <GatedRoute pageKey="hostel">
+        <HostelApplication
+          studentMatric={studentId}
+          studentName={studentName}
+        />
+      </GatedRoute>
     );
 
   if (activePage === "library")
-    return <StudentLibrary studentMatric={studentId} />;
+    return (
+      <GatedRoute pageKey="library">
+        <StudentLibrary studentMatric={studentId} />
+      </GatedRoute>
+    );
   if (activePage === "academic-calendar")
     return <AcademicCalendar isAdmin={false} />;
   if (activePage === "exam-schedule")
     return <ExamSchedule userEmail={userEmail} />;
   if (activePage === "announcements") return <Announcements />;
   if (activePage === "result-slip")
-    return <ResultSlip userEmail={userEmail} userName={userName} />;
+    return (
+      <GatedRoute pageKey="result-slip">
+        <ResultSlip userEmail={userEmail} userName={userName} />
+      </GatedRoute>
+    );
   if (activePage === "gpa-summary") return <GPASummary userEmail={userEmail} />;
   if (activePage === "academic-status-student")
     return <AcademicStatusStudent userEmail={userEmail} />;
@@ -645,5 +665,11 @@ export function StudentDashboard({
   if (activePage === "announcements-view")
     return <AnnouncementView role={"student" as never} />;
   if (activePage === "communication-center") return <CommunicationCenter />;
+  if (activePage === "my-certificates")
+    return (
+      <GatedRoute pageKey="my-certificates">
+        <MyCertificates userName={userName} userEmail={userEmail} />
+      </GatedRoute>
+    );
   return null;
 }
