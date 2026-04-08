@@ -42,11 +42,13 @@ import {
   saveLocalLeaves,
   saveLocalStaff,
 } from "../../utils/sampleData";
+import { MemoAcknowledgment } from "../shared/MemoAcknowledgment";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { Appraisals } from "./Appraisals";
 import { Payroll } from "./Payroll";
 import { StaffTraining } from "./StaffTraining";
+import { TrainingApprovalHR } from "./TrainingApprovalHR";
 
 type Page =
   | "dashboard"
@@ -59,7 +61,9 @@ type Page =
   | "appraisals"
   | "student-records"
   | "staff-training"
-  | "staff-directory";
+  | "training-approval-hr"
+  | "staff-directory"
+  | "memos";
 interface Props {
   activePage: Page;
 }
@@ -815,7 +819,9 @@ export function HRDashboard({ activePage }: Props) {
   if (activePage === "student-records")
     return <StudentRecordsList userRole="hr" />;
   if (activePage === "staff-training") return <StaffTraining />;
+  if (activePage === "training-approval-hr") return <TrainingApprovalHR />;
   if (activePage === "staff-directory") return <StaffDirectory />;
+  if (activePage === "memos") return <MemoAcknowledgment userRole="hr" />;
 
   return null;
 }

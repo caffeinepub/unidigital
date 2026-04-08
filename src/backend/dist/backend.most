@@ -1,0 +1,330 @@
+// Version: 1.0.0
+type AcademicProgression__725193619 =
+  {stages : [ProgressionStage__237814385]; studentMatric : Text};
+type AlumniProfile__80662947 =
+  {
+    department : Text;
+    email : Text;
+    employer : Text;
+    graduationYear : Nat;
+    jobTitle : Text;
+    linkedIn : Text;
+    location : Text;
+    matricNumber : Text;
+    name : Text
+  };
+type Announcement__674333181 =
+  {
+    body : Text;
+    createdAt : Int;
+    createdBy : Text;
+    expiresAt : Int;
+    id : Text;
+    isActive : Bool;
+    priority : Text;
+    targetRoles : [Text];
+    title : Text
+  };
+type AppraisalCycle__471481414 = {#annual; #midYear};
+type AppraisalStatus__642005805 = {#draft; #finalized; #reviewed; #submitted};
+type ApprovalStage__496845037 = {#dean; #dvc; #hod; #vc};
+type Assignment__702522088 =
+  {
+    courseCode : Text;
+    createdAt : Int;
+    createdByLecturerId : Text;
+    description : Text;
+    dueDate : Int;
+    id : Text;
+    title : Text
+  };
+type CAScore__964455320 =
+  {
+    assignmentScore : Nat;
+    attendanceScore : Nat;
+    courseCode : Text;
+    createdAt : Int;
+    id : Text;
+    lecturerName : Text;
+    quizScore : Nat;
+    semester : Text;
+    session : Text;
+    studentMatric : Text;
+    testScore : Nat;
+    totalCA : Nat
+  };
+type CourseRegistration__672778327 =
+  {
+    courseCode : Text;
+    courseTitle : Text;
+    creditUnits : Nat;
+    id : Text;
+    registeredAt : Int;
+    semester : Text;
+    session : Text;
+    status : Text;
+    studentMatric : Text
+  };
+type Course__388460598 =
+  {
+    code : Text;
+    creditUnits : Nat;
+    department : Text;
+    lecturerId : Text;
+    semester : Text;
+    title : Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Designation__885070497 = {#admin; #bursary; #hr; #lecturer; #support};
+type DocumentRecord__161942319 =
+  {
+    blobId : Text;
+    documentType : Text;
+    id : Text;
+    linkedRecordId : Text;
+    linkedRecordType : Text;
+    notes : Text;
+    title : Text;
+    uploadedAt : Int;
+    uploaderName : Text;
+    uploaderPrincipal : Text
+  };
+type ExamResult__14229232 =
+  {
+    approvalLevel : Text;
+    caScore : Nat;
+    courseCode : Text;
+    courseTitle : Text;
+    createdAt : Int;
+    creditUnits : Nat;
+    examScore : Nat;
+    grade : Text;
+    gradePoints : Nat;
+    id : Text;
+    rejectionReason : Text;
+    remark : Text;
+    semester : Text;
+    session : Text;
+    status : Text;
+    studentMatric : Text;
+    totalScore : Nat;
+    updatedAt : Int
+  };
+type HostelApplication__738193755 =
+  {
+    adminComment : Text;
+    applicationDate : Int;
+    assignedRoom : Text;
+    department : Text;
+    id : Text;
+    level : Text;
+    preferredBlock : Text;
+    processedAt : Int;
+    roomType : Text;
+    specialNeeds : Text;
+    status : Text;
+    studentMatric : Text;
+    studentName : Text
+  };
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type InvoiceStatus__236995324 = {#paid; #pending};
+type Invoice__772203955 =
+  {
+    amount : Nat;
+    id : Text;
+    paidAt : ?Int;
+    semester : Text;
+    status : InvoiceStatus__236995324;
+    studentMatric : Text
+  };
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Memo__805009805 =
+  {
+    body : Text;
+    createdAt : Int;
+    senderName : Text;
+    targetAudience : Text;
+    title : Text
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type ProgressionStage__237814385 =
+  {completedAt : Int; details : Text; stageName : Text; status : Text};
+type RequestStatus__1046322842 = {#approved; #pending; #rejected};
+type RequestType__880343853 = {#leave; #training; #travel};
+type StaffAppraisal__368292224 =
+  {
+    achievements : Text;
+    cycle : AppraisalCycle__471481414;
+    department : Text;
+    id : Text;
+    kpis : Text;
+    period : Text;
+    reviewComment : ?Text;
+    reviewScore : ?Text;
+    reviewerName : Text;
+    selfAppraisalText : Text;
+    staffName : Text;
+    staffPrincipal : Principal;
+    status : AppraisalStatus__642005805;
+    submittedAt : Int;
+    targetsNextPeriod : Text
+  };
+type StaffProfile__147332708 =
+  {
+    department : Text;
+    designation : Designation__885070497;
+    email : Text;
+    name : Text;
+    staffId : Text
+  };
+type StaffProfile__985123658 = StaffProfile__147332708;
+type StaffRequest__826227244 =
+  {
+    createdAt : Int;
+    currentStage : ApprovalStage__496845037;
+    description : Text;
+    id : Text;
+    requestType : RequestType__880343853;
+    stageHistory : [StageRecord__397605287];
+    status : RequestStatus__1046322842;
+    submittedBy : Principal;
+    submittedByName : Text
+  };
+type StageRecord__397605287 =
+  {
+    comment : Text;
+    decidedAt : Int;
+    decidedBy : Text;
+    decision : Text;
+    stage : Text
+  };
+type StudentProfile__144515968 =
+  {
+    department : Text;
+    email : Text;
+    level : Text;
+    matricNumber : Text;
+    name : Text
+  };
+type StudentProfile__643794413 = StudentProfile__144515968;
+type Submission__688246233 =
+  {
+    assignmentId : Text;
+    feedback : ?Text;
+    fileIds : [Text];
+    grade : ?Text;
+    id : Text;
+    studentMatric : Text;
+    studentPrincipal : Text;
+    submittedAt : Int
+  };
+type UserProfile__491224006 = {email : Text; name : Text; role : Text};
+type UserRole__1054455867 = {#admin; #guest; #user};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable alumni :
+    {
+      var root : Node__46230540<Text, AlumniProfile__80662947>;
+      var size : Nat__490723111
+    };
+  stable alumniOwnership :
+    {var root : Node__46230540<Text, Principal>; var size : Nat__490723111};
+  stable announcements :
+    {
+      var root : Node__46230540<Text, Announcement__674333181>;
+      var size : Nat__490723111
+    };
+  stable appraisals :
+    {
+      var root : Node__46230540<Text, StaffAppraisal__368292224>;
+      var size : Nat__490723111
+    };
+  stable assignments :
+    {
+      var root : Node__46230540<Text, Assignment__702522088>;
+      var size : Nat__490723111
+    };
+  stable caScores :
+    {
+      var root : Node__46230540<Text, CAScore__964455320>;
+      var size : Nat__490723111
+    };
+  stable courseRegistrations :
+    {
+      var root : Node__46230540<Text, CourseRegistration__672778327>;
+      var size : Nat__490723111
+    };
+  stable courses :
+    {
+      var root : Node__46230540<Text, Course__388460598>;
+      var size : Nat__490723111
+    };
+  stable documentRecords :
+    {
+      var root : Node__46230540<Text, DocumentRecord__161942319>;
+      var size : Nat__490723111
+    };
+  stable examResults :
+    {
+      var root : Node__46230540<Text, ExamResult__14229232>;
+      var size : Nat__490723111
+    };
+  stable hostelApplications :
+    {
+      var root : Node__46230540<Text, HostelApplication__738193755>;
+      var size : Nat__490723111
+    };
+  stable invoices :
+    {
+      var root : Node__46230540<Text, Invoice__772203955>;
+      var size : Nat__490723111
+    };
+  stable memos :
+    {
+      var root : Node__46230540<Text, Memo__805009805>;
+      var size : Nat__490723111
+    };
+  stable progression :
+    {
+      var root : Node__46230540<Text, AcademicProgression__725193619>;
+      var size : Nat__490723111
+    };
+  stable staff :
+    {
+      var root : Node__46230540<Text, StaffProfile__985123658>;
+      var size : Nat__490723111
+    };
+  stable staffRequests :
+    {
+      var root : Node__46230540<Text, StaffRequest__826227244>;
+      var size : Nat__490723111
+    };
+  stable students :
+    {
+      var root : Node__46230540<Text, StudentProfile__643794413>;
+      var size : Nat__490723111
+    };
+  stable submissions :
+    {
+      var root : Node__46230540<Text, Submission__688246233>;
+      var size : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    }
+};

@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Award,
   BarChart3,
   Bell,
@@ -14,6 +15,7 @@ import {
   ClipboardList,
   Database,
   DollarSign,
+  Download,
   FileSpreadsheet,
   FileText,
   Fingerprint,
@@ -27,14 +29,17 @@ import {
   Library,
   ListChecks,
   LogOut,
+  Mail,
   Megaphone,
   Menu,
   MessageSquare,
+  NotebookText,
   Receipt,
   RefreshCw,
   ScanLine,
   ScrollText,
   Settings,
+  Shield,
   Sparkles,
   Star,
   TrendingUp,
@@ -221,7 +226,52 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <BarChart3 size={18} />,
       key: "analytics-dashboard",
     },
+    {
+      label: "Hostel Allocation",
+      icon: <Home size={18} />,
+      key: "hostel-allocation",
+    },
+    {
+      label: "Hostel Transfers",
+      icon: <RefreshCw size={18} />,
+      key: "hostel-transfers",
+    },
+    {
+      label: "Timetable Conflicts",
+      icon: <Calendar size={18} />,
+      key: "timetable-conflicts",
+    },
+    {
+      label: "CBT Analytics",
+      icon: <BarChart3 size={18} />,
+      key: "cbt-analytics",
+    },
+    {
+      label: "CBT Re-sits",
+      icon: <ClipboardCheck size={18} />,
+      key: "cbt-resit",
+    },
     { label: "Settings", icon: <Settings size={18} />, key: "settings" },
+    {
+      label: "Disciplinary Records",
+      icon: <Shield size={18} />,
+      key: "disciplinary-records",
+    },
+    {
+      label: "Meeting Minutes",
+      icon: <NotebookText size={18} />,
+      key: "senate-minutes",
+    },
+    {
+      label: "Internal Memos",
+      icon: <Mail size={18} />,
+      key: "internal-memos",
+    },
+    {
+      label: "Data Export",
+      icon: <Download size={18} />,
+      key: "data-export",
+    },
   ],
   student: [
     {
@@ -319,6 +369,11 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <FileSpreadsheet size={18} />,
       key: "academic-record",
     },
+    {
+      label: "Disciplinary Record",
+      icon: <Shield size={18} />,
+      key: "disciplinary-record",
+    },
   ],
   lecturer: [
     {
@@ -380,6 +435,21 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Fingerprint size={18} />,
       key: "biometric-attendance",
     },
+    {
+      label: "Score Bulk Upload",
+      icon: <Database size={18} />,
+      key: "score-bulk-upload",
+    },
+    {
+      label: "Training Application",
+      icon: <BookMarked size={18} />,
+      key: "training-application",
+    },
+    {
+      label: "Staff Directory",
+      icon: <Users size={18} />,
+      key: "staff-directory",
+    },
   ],
   bursary: [
     {
@@ -402,6 +472,26 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <FileSpreadsheet size={18} />,
       key: "student-records",
     },
+    {
+      label: "Debt Aging",
+      icon: <AlertTriangle size={18} />,
+      key: "debt-aging",
+    },
+    {
+      label: "Installment Plans",
+      icon: <CalendarDays size={18} />,
+      key: "installment-plans",
+    },
+    {
+      label: "Fee Waivers",
+      icon: <HeartHandshake size={18} />,
+      key: "fee-waivers",
+    },
+    {
+      label: "Reconciliation (Adv)",
+      icon: <TrendingUp size={18} />,
+      key: "bursary-reconciliation",
+    },
   ],
   hr: [
     {
@@ -420,6 +510,26 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Student Records",
       icon: <FileSpreadsheet size={18} />,
       key: "student-records",
+    },
+    {
+      label: "Staff Training",
+      icon: <BookOpen size={18} />,
+      key: "staff-training",
+    },
+    {
+      label: "Training Approvals",
+      icon: <ClipboardCheck size={18} />,
+      key: "training-approval-hr",
+    },
+    {
+      label: "Staff Directory",
+      icon: <Users size={18} />,
+      key: "staff-directory",
+    },
+    {
+      label: "Memos",
+      icon: <Mail size={18} />,
+      key: "memos",
     },
   ],
   hod: [
@@ -479,6 +589,26 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <FileSpreadsheet size={18} />,
       key: "student-records",
     },
+    {
+      label: "Training Approvals",
+      icon: <ClipboardCheck size={18} />,
+      key: "training-approval-hod",
+    },
+    {
+      label: "Staff Directory",
+      icon: <Users size={18} />,
+      key: "staff-directory",
+    },
+    {
+      label: "Disciplinary Records",
+      icon: <Shield size={18} />,
+      key: "disciplinary-records",
+    },
+    {
+      label: "Memos",
+      icon: <Mail size={18} />,
+      key: "memos",
+    },
   ],
   alumni: [
     {
@@ -495,6 +625,11 @@ const navByRole: Record<string, NavItem[]> = {
 
 // Unused icon suppressor
 void Bot;
+void BookMarked;
+void MessageSquare;
+void Sparkles;
+void Globe;
+void FlaskConical;
 
 function formatRelativeTime(d: Date): string {
   const diff = Date.now() - d.getTime();

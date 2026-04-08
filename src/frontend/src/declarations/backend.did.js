@@ -8,14 +8,14 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
-export const _CaffeineStorageCreateCertificateResult = IDL.Record({
+export const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
   'method' : IDL.Text,
   'blob_hash' : IDL.Text,
 });
-export const _CaffeineStorageRefillInformation = IDL.Record({
+export const _ImmutableObjectStorageRefillInformation = IDL.Record({
   'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
 });
-export const _CaffeineStorageRefillResult = IDL.Record({
+export const _ImmutableObjectStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
@@ -24,6 +24,21 @@ export const ProgressionStage = IDL.Record({
   'completedAt' : IDL.Int,
   'details' : IDL.Text,
   'stageName' : IDL.Text,
+});
+export const HostelApplication = IDL.Record({
+  'id' : IDL.Text,
+  'status' : IDL.Text,
+  'studentName' : IDL.Text,
+  'level' : IDL.Text,
+  'processedAt' : IDL.Int,
+  'preferredBlock' : IDL.Text,
+  'adminComment' : IDL.Text,
+  'studentMatric' : IDL.Text,
+  'assignedRoom' : IDL.Text,
+  'department' : IDL.Text,
+  'roomType' : IDL.Text,
+  'applicationDate' : IDL.Int,
+  'specialNeeds' : IDL.Text,
 });
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
@@ -41,6 +56,17 @@ export const AlumniProfile = IDL.Record({
   'department' : IDL.Text,
   'location' : IDL.Text,
 });
+export const Announcement = IDL.Record({
+  'id' : IDL.Text,
+  'title' : IDL.Text,
+  'expiresAt' : IDL.Int,
+  'body' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'createdBy' : IDL.Text,
+  'isActive' : IDL.Bool,
+  'targetRoles' : IDL.Vec(IDL.Text),
+  'priority' : IDL.Text,
+});
 export const Assignment = IDL.Record({
   'id' : IDL.Text,
   'title' : IDL.Text,
@@ -50,6 +76,20 @@ export const Assignment = IDL.Record({
   'createdByLecturerId' : IDL.Text,
   'courseCode' : IDL.Text,
 });
+export const CAScore = IDL.Record({
+  'id' : IDL.Text,
+  'semester' : IDL.Text,
+  'quizScore' : IDL.Nat,
+  'testScore' : IDL.Nat,
+  'totalCA' : IDL.Nat,
+  'createdAt' : IDL.Int,
+  'assignmentScore' : IDL.Nat,
+  'lecturerName' : IDL.Text,
+  'session' : IDL.Text,
+  'attendanceScore' : IDL.Nat,
+  'studentMatric' : IDL.Text,
+  'courseCode' : IDL.Text,
+});
 export const Course = IDL.Record({
   'title' : IDL.Text,
   'semester' : IDL.Text,
@@ -57,6 +97,38 @@ export const Course = IDL.Record({
   'creditUnits' : IDL.Nat,
   'department' : IDL.Text,
   'lecturerId' : IDL.Text,
+});
+export const DocumentRecord = IDL.Record({
+  'id' : IDL.Text,
+  'title' : IDL.Text,
+  'documentType' : IDL.Text,
+  'uploaderName' : IDL.Text,
+  'uploaderPrincipal' : IDL.Text,
+  'linkedRecordType' : IDL.Text,
+  'notes' : IDL.Text,
+  'linkedRecordId' : IDL.Text,
+  'blobId' : IDL.Text,
+  'uploadedAt' : IDL.Int,
+});
+export const ExamResult = IDL.Record({
+  'id' : IDL.Text,
+  'remark' : IDL.Text,
+  'status' : IDL.Text,
+  'semester' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'rejectionReason' : IDL.Text,
+  'gradePoints' : IDL.Nat,
+  'examScore' : IDL.Nat,
+  'totalScore' : IDL.Nat,
+  'updatedAt' : IDL.Int,
+  'session' : IDL.Text,
+  'grade' : IDL.Text,
+  'creditUnits' : IDL.Nat,
+  'studentMatric' : IDL.Text,
+  'courseTitle' : IDL.Text,
+  'courseCode' : IDL.Text,
+  'caScore' : IDL.Nat,
+  'approvalLevel' : IDL.Text,
 });
 export const InvoiceStatus = IDL.Variant({
   'pending' : IDL.Null,
@@ -97,6 +169,17 @@ export const StudentProfile = IDL.Record({
   'email' : IDL.Text,
   'level' : IDL.Text,
   'department' : IDL.Text,
+});
+export const CourseRegistration = IDL.Record({
+  'id' : IDL.Text,
+  'status' : IDL.Text,
+  'semester' : IDL.Text,
+  'session' : IDL.Text,
+  'creditUnits' : IDL.Nat,
+  'studentMatric' : IDL.Text,
+  'courseTitle' : IDL.Text,
+  'courseCode' : IDL.Text,
+  'registeredAt' : IDL.Int,
 });
 export const AppraisalStatus = IDL.Variant({
   'submitted' : IDL.Null,
@@ -180,53 +263,80 @@ export const Submission = IDL.Record({
 });
 
 export const idlService = IDL.Service({
-  '_caffeineStorageBlobIsLive' : IDL.Func(
-      [IDL.Vec(IDL.Nat8)],
-      [IDL.Bool],
+  '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [IDL.Vec(IDL.Bool)],
       ['query'],
     ),
-  '_caffeineStorageBlobsToDelete' : IDL.Func(
+  '_immutableObjectStorageBlobsToDelete' : IDL.Func(
       [],
       [IDL.Vec(IDL.Vec(IDL.Nat8))],
       ['query'],
     ),
-  '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+  '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
       [IDL.Vec(IDL.Vec(IDL.Nat8))],
       [],
       [],
     ),
-  '_caffeineStorageCreateCertificate' : IDL.Func(
+  '_immutableObjectStorageCreateCertificate' : IDL.Func(
       [IDL.Text],
-      [_CaffeineStorageCreateCertificateResult],
+      [_ImmutableObjectStorageCreateCertificateResult],
       [],
     ),
-  '_caffeineStorageRefillCashier' : IDL.Func(
-      [IDL.Opt(_CaffeineStorageRefillInformation)],
-      [_CaffeineStorageRefillResult],
+  '_immutableObjectStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+      [_ImmutableObjectStorageRefillResult],
       [],
     ),
-  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+  '_initializeAccessControl' : IDL.Func([], [], []),
   'addProgressionStage' : IDL.Func([IDL.Text, ProgressionStage], [], []),
+  'applyForHostel' : IDL.Func([HostelApplication], [IDL.Text], []),
+  'approveRegistration' : IDL.Func([IDL.Text], [], []),
+  'approveResult' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'createAlumniProfile' : IDL.Func([AlumniProfile], [], []),
+  'createAnnouncement' : IDL.Func([Announcement], [IDL.Text], []),
   'createAssignment' : IDL.Func([Assignment], [IDL.Text], []),
+  'createCAScore' : IDL.Func([CAScore], [IDL.Text], []),
   'createCourse' : IDL.Func([Course], [], []),
+  'createDocumentRecord' : IDL.Func([DocumentRecord], [IDL.Text], []),
+  'createExamResult' : IDL.Func([ExamResult], [IDL.Text], []),
   'createInvoice' : IDL.Func([Invoice], [IDL.Text], []),
   'createMemo' : IDL.Func([Memo], [IDL.Text], []),
   'createProgressionRecord' : IDL.Func([IDL.Text], [], []),
   'createStaff' : IDL.Func([StaffProfile], [], []),
   'createStudent' : IDL.Func([StudentProfile], [], []),
+  'deleteAnnouncement' : IDL.Func([IDL.Text], [], []),
+  'dropCourse' : IDL.Func([IDL.Text], [], []),
   'finalizeAppraisal' : IDL.Func([IDL.Text], [], []),
+  'getAllRegistrations' : IDL.Func(
+      [],
+      [IDL.Vec(CourseRegistration)],
+      ['query'],
+    ),
   'getAlumniProfile' : IDL.Func(
       [IDL.Text],
       [IDL.Opt(AlumniProfile)],
       ['query'],
     ),
+  'getAnnouncement' : IDL.Func([IDL.Text], [IDL.Opt(Announcement)], ['query']),
   'getAppraisal' : IDL.Func([IDL.Text], [IDL.Opt(StaffAppraisal)], ['query']),
+  'getCAScore' : IDL.Func([IDL.Text], [IDL.Opt(CAScore)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCourse' : IDL.Func([IDL.Text], [IDL.Opt(Course)], ['query']),
+  'getDocumentRecord' : IDL.Func(
+      [IDL.Text],
+      [IDL.Opt(DocumentRecord)],
+      ['query'],
+    ),
+  'getExamResult' : IDL.Func([IDL.Text], [IDL.Opt(ExamResult)], ['query']),
+  'getHostelApplication' : IDL.Func(
+      [IDL.Text],
+      [IDL.Opt(HostelApplication)],
+      ['query'],
+    ),
   'getMemo' : IDL.Func([IDL.Text], [IDL.Opt(Memo)], ['query']),
   'getProgressionRecord' : IDL.Func(
       [IDL.Text],
@@ -252,10 +362,18 @@ export const idlService = IDL.Service({
     ),
   'gradeSubmission' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listActiveAnnouncements' : IDL.Func([], [IDL.Vec(Announcement)], ['query']),
   'listAllAlumni' : IDL.Func([], [IDL.Vec(AlumniProfile)], ['query']),
+  'listAllAnnouncements' : IDL.Func([], [IDL.Vec(Announcement)], ['query']),
   'listAllAppraisals' : IDL.Func([], [IDL.Vec(StaffAppraisal)], ['query']),
   'listAllAssignments' : IDL.Func([], [IDL.Vec(Assignment)], ['query']),
   'listAllCourses' : IDL.Func([], [IDL.Vec(Course)], ['query']),
+  'listAllDocuments' : IDL.Func([], [IDL.Vec(DocumentRecord)], ['query']),
+  'listAllHostelApplications' : IDL.Func(
+      [],
+      [IDL.Vec(HostelApplication)],
+      ['query'],
+    ),
   'listAllInvoices' : IDL.Func([], [IDL.Vec(Invoice)], ['query']),
   'listAllMemos' : IDL.Func([], [IDL.Vec(Memo)], ['query']),
   'listAllProgressionRecords' : IDL.Func(
@@ -282,20 +400,85 @@ export const idlService = IDL.Service({
       [IDL.Vec(Assignment)],
       ['query'],
     ),
+  'listCAScoresByCourse' : IDL.Func([IDL.Text], [IDL.Vec(CAScore)], ['query']),
+  'listCAScoresByStudent' : IDL.Func([IDL.Text], [IDL.Vec(CAScore)], ['query']),
+  'listDocumentsByLinkedRecord' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(DocumentRecord)],
+      ['query'],
+    ),
+  'listDocumentsByType' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(DocumentRecord)],
+      ['query'],
+    ),
+  'listDocumentsByUploader' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(DocumentRecord)],
+      ['query'],
+    ),
+  'listHostelApplicationsByStatus' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(HostelApplication)],
+      ['query'],
+    ),
+  'listHostelApplicationsByStudent' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(HostelApplication)],
+      ['query'],
+    ),
   'listInvoicesByStudent' : IDL.Func([IDL.Text], [IDL.Vec(Invoice)], ['query']),
   'listMyStaffRequests' : IDL.Func([], [IDL.Vec(StaffRequest)], ['query']),
   'listMySubmissions' : IDL.Func([IDL.Text], [IDL.Vec(Submission)], ['query']),
+  'listRegistrationsByCourse' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(CourseRegistration)],
+      ['query'],
+    ),
+  'listRegistrationsByStudent' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(CourseRegistration)],
+      ['query'],
+    ),
+  'listResultsByCourse' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(ExamResult)],
+      ['query'],
+    ),
+  'listResultsBySemester' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Vec(ExamResult)],
+      ['query'],
+    ),
+  'listResultsByStatus' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(ExamResult)],
+      ['query'],
+    ),
+  'listResultsByStudent' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(ExamResult)],
+      ['query'],
+    ),
   'listSubmissionsByAssignment' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(Submission)],
       ['query'],
     ),
   'markInvoicePaid' : IDL.Func([IDL.Text, IDL.Int], [], []),
+  'processHostelApplication' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int],
+      [],
+      [],
+    ),
   'processStaffRequest' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int],
       [],
       [],
     ),
+  'publishResult' : IDL.Func([IDL.Text], [], []),
+  'registerCourse' : IDL.Func([CourseRegistration], [IDL.Text], []),
+  'rejectResult' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'reviewAppraisal' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
       [],
@@ -303,10 +486,14 @@ export const idlService = IDL.Service({
     ),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'submitAssignment' : IDL.Func([Submission], [IDL.Text], []),
+  'submitResultForApproval' : IDL.Func([IDL.Text], [], []),
   'submitSelfAppraisal' : IDL.Func([StaffAppraisal], [IDL.Text], []),
   'submitStaffRequest' : IDL.Func([StaffRequest], [IDL.Text], []),
   'updateAlumniProfile' : IDL.Func([IDL.Text, AlumniProfile], [], []),
+  'updateAnnouncement' : IDL.Func([IDL.Text, Announcement], [], []),
+  'updateCAScore' : IDL.Func([IDL.Text, CAScore], [], []),
   'updateCourse' : IDL.Func([IDL.Text, Course], [], []),
+  'updateExamResult' : IDL.Func([IDL.Text, ExamResult], [], []),
   'updateStaff' : IDL.Func([IDL.Text, StaffProfile], [], []),
   'updateStudent' : IDL.Func([IDL.Text, StudentProfile], [], []),
 });
@@ -314,14 +501,14 @@ export const idlService = IDL.Service({
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
-  const _CaffeineStorageCreateCertificateResult = IDL.Record({
+  const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
     'method' : IDL.Text,
     'blob_hash' : IDL.Text,
   });
-  const _CaffeineStorageRefillInformation = IDL.Record({
+  const _ImmutableObjectStorageRefillInformation = IDL.Record({
     'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
   });
-  const _CaffeineStorageRefillResult = IDL.Record({
+  const _ImmutableObjectStorageRefillResult = IDL.Record({
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
@@ -330,6 +517,21 @@ export const idlFactory = ({ IDL }) => {
     'completedAt' : IDL.Int,
     'details' : IDL.Text,
     'stageName' : IDL.Text,
+  });
+  const HostelApplication = IDL.Record({
+    'id' : IDL.Text,
+    'status' : IDL.Text,
+    'studentName' : IDL.Text,
+    'level' : IDL.Text,
+    'processedAt' : IDL.Int,
+    'preferredBlock' : IDL.Text,
+    'adminComment' : IDL.Text,
+    'studentMatric' : IDL.Text,
+    'assignedRoom' : IDL.Text,
+    'department' : IDL.Text,
+    'roomType' : IDL.Text,
+    'applicationDate' : IDL.Int,
+    'specialNeeds' : IDL.Text,
   });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
@@ -347,6 +549,17 @@ export const idlFactory = ({ IDL }) => {
     'department' : IDL.Text,
     'location' : IDL.Text,
   });
+  const Announcement = IDL.Record({
+    'id' : IDL.Text,
+    'title' : IDL.Text,
+    'expiresAt' : IDL.Int,
+    'body' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'createdBy' : IDL.Text,
+    'isActive' : IDL.Bool,
+    'targetRoles' : IDL.Vec(IDL.Text),
+    'priority' : IDL.Text,
+  });
   const Assignment = IDL.Record({
     'id' : IDL.Text,
     'title' : IDL.Text,
@@ -356,6 +569,20 @@ export const idlFactory = ({ IDL }) => {
     'createdByLecturerId' : IDL.Text,
     'courseCode' : IDL.Text,
   });
+  const CAScore = IDL.Record({
+    'id' : IDL.Text,
+    'semester' : IDL.Text,
+    'quizScore' : IDL.Nat,
+    'testScore' : IDL.Nat,
+    'totalCA' : IDL.Nat,
+    'createdAt' : IDL.Int,
+    'assignmentScore' : IDL.Nat,
+    'lecturerName' : IDL.Text,
+    'session' : IDL.Text,
+    'attendanceScore' : IDL.Nat,
+    'studentMatric' : IDL.Text,
+    'courseCode' : IDL.Text,
+  });
   const Course = IDL.Record({
     'title' : IDL.Text,
     'semester' : IDL.Text,
@@ -363,6 +590,38 @@ export const idlFactory = ({ IDL }) => {
     'creditUnits' : IDL.Nat,
     'department' : IDL.Text,
     'lecturerId' : IDL.Text,
+  });
+  const DocumentRecord = IDL.Record({
+    'id' : IDL.Text,
+    'title' : IDL.Text,
+    'documentType' : IDL.Text,
+    'uploaderName' : IDL.Text,
+    'uploaderPrincipal' : IDL.Text,
+    'linkedRecordType' : IDL.Text,
+    'notes' : IDL.Text,
+    'linkedRecordId' : IDL.Text,
+    'blobId' : IDL.Text,
+    'uploadedAt' : IDL.Int,
+  });
+  const ExamResult = IDL.Record({
+    'id' : IDL.Text,
+    'remark' : IDL.Text,
+    'status' : IDL.Text,
+    'semester' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'rejectionReason' : IDL.Text,
+    'gradePoints' : IDL.Nat,
+    'examScore' : IDL.Nat,
+    'totalScore' : IDL.Nat,
+    'updatedAt' : IDL.Int,
+    'session' : IDL.Text,
+    'grade' : IDL.Text,
+    'creditUnits' : IDL.Nat,
+    'studentMatric' : IDL.Text,
+    'courseTitle' : IDL.Text,
+    'courseCode' : IDL.Text,
+    'caScore' : IDL.Nat,
+    'approvalLevel' : IDL.Text,
   });
   const InvoiceStatus = IDL.Variant({
     'pending' : IDL.Null,
@@ -403,6 +662,17 @@ export const idlFactory = ({ IDL }) => {
     'email' : IDL.Text,
     'level' : IDL.Text,
     'department' : IDL.Text,
+  });
+  const CourseRegistration = IDL.Record({
+    'id' : IDL.Text,
+    'status' : IDL.Text,
+    'semester' : IDL.Text,
+    'session' : IDL.Text,
+    'creditUnits' : IDL.Nat,
+    'studentMatric' : IDL.Text,
+    'courseTitle' : IDL.Text,
+    'courseCode' : IDL.Text,
+    'registeredAt' : IDL.Int,
   });
   const AppraisalStatus = IDL.Variant({
     'submitted' : IDL.Null,
@@ -486,53 +756,84 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
-    '_caffeineStorageBlobIsLive' : IDL.Func(
-        [IDL.Vec(IDL.Nat8)],
-        [IDL.Bool],
+    '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Bool)],
         ['query'],
       ),
-    '_caffeineStorageBlobsToDelete' : IDL.Func(
+    '_immutableObjectStorageBlobsToDelete' : IDL.Func(
         [],
         [IDL.Vec(IDL.Vec(IDL.Nat8))],
         ['query'],
       ),
-    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+    '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
         [IDL.Vec(IDL.Vec(IDL.Nat8))],
         [],
         [],
       ),
-    '_caffeineStorageCreateCertificate' : IDL.Func(
+    '_immutableObjectStorageCreateCertificate' : IDL.Func(
         [IDL.Text],
-        [_CaffeineStorageCreateCertificateResult],
+        [_ImmutableObjectStorageCreateCertificateResult],
         [],
       ),
-    '_caffeineStorageRefillCashier' : IDL.Func(
-        [IDL.Opt(_CaffeineStorageRefillInformation)],
-        [_CaffeineStorageRefillResult],
+    '_immutableObjectStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+        [_ImmutableObjectStorageRefillResult],
         [],
       ),
-    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+    '_initializeAccessControl' : IDL.Func([], [], []),
     'addProgressionStage' : IDL.Func([IDL.Text, ProgressionStage], [], []),
+    'applyForHostel' : IDL.Func([HostelApplication], [IDL.Text], []),
+    'approveRegistration' : IDL.Func([IDL.Text], [], []),
+    'approveResult' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'createAlumniProfile' : IDL.Func([AlumniProfile], [], []),
+    'createAnnouncement' : IDL.Func([Announcement], [IDL.Text], []),
     'createAssignment' : IDL.Func([Assignment], [IDL.Text], []),
+    'createCAScore' : IDL.Func([CAScore], [IDL.Text], []),
     'createCourse' : IDL.Func([Course], [], []),
+    'createDocumentRecord' : IDL.Func([DocumentRecord], [IDL.Text], []),
+    'createExamResult' : IDL.Func([ExamResult], [IDL.Text], []),
     'createInvoice' : IDL.Func([Invoice], [IDL.Text], []),
     'createMemo' : IDL.Func([Memo], [IDL.Text], []),
     'createProgressionRecord' : IDL.Func([IDL.Text], [], []),
     'createStaff' : IDL.Func([StaffProfile], [], []),
     'createStudent' : IDL.Func([StudentProfile], [], []),
+    'deleteAnnouncement' : IDL.Func([IDL.Text], [], []),
+    'dropCourse' : IDL.Func([IDL.Text], [], []),
     'finalizeAppraisal' : IDL.Func([IDL.Text], [], []),
+    'getAllRegistrations' : IDL.Func(
+        [],
+        [IDL.Vec(CourseRegistration)],
+        ['query'],
+      ),
     'getAlumniProfile' : IDL.Func(
         [IDL.Text],
         [IDL.Opt(AlumniProfile)],
         ['query'],
       ),
+    'getAnnouncement' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(Announcement)],
+        ['query'],
+      ),
     'getAppraisal' : IDL.Func([IDL.Text], [IDL.Opt(StaffAppraisal)], ['query']),
+    'getCAScore' : IDL.Func([IDL.Text], [IDL.Opt(CAScore)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCourse' : IDL.Func([IDL.Text], [IDL.Opt(Course)], ['query']),
+    'getDocumentRecord' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(DocumentRecord)],
+        ['query'],
+      ),
+    'getExamResult' : IDL.Func([IDL.Text], [IDL.Opt(ExamResult)], ['query']),
+    'getHostelApplication' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(HostelApplication)],
+        ['query'],
+      ),
     'getMemo' : IDL.Func([IDL.Text], [IDL.Opt(Memo)], ['query']),
     'getProgressionRecord' : IDL.Func(
         [IDL.Text],
@@ -562,10 +863,22 @@ export const idlFactory = ({ IDL }) => {
       ),
     'gradeSubmission' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listActiveAnnouncements' : IDL.Func(
+        [],
+        [IDL.Vec(Announcement)],
+        ['query'],
+      ),
     'listAllAlumni' : IDL.Func([], [IDL.Vec(AlumniProfile)], ['query']),
+    'listAllAnnouncements' : IDL.Func([], [IDL.Vec(Announcement)], ['query']),
     'listAllAppraisals' : IDL.Func([], [IDL.Vec(StaffAppraisal)], ['query']),
     'listAllAssignments' : IDL.Func([], [IDL.Vec(Assignment)], ['query']),
     'listAllCourses' : IDL.Func([], [IDL.Vec(Course)], ['query']),
+    'listAllDocuments' : IDL.Func([], [IDL.Vec(DocumentRecord)], ['query']),
+    'listAllHostelApplications' : IDL.Func(
+        [],
+        [IDL.Vec(HostelApplication)],
+        ['query'],
+      ),
     'listAllInvoices' : IDL.Func([], [IDL.Vec(Invoice)], ['query']),
     'listAllMemos' : IDL.Func([], [IDL.Vec(Memo)], ['query']),
     'listAllProgressionRecords' : IDL.Func(
@@ -592,6 +905,41 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Assignment)],
         ['query'],
       ),
+    'listCAScoresByCourse' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CAScore)],
+        ['query'],
+      ),
+    'listCAScoresByStudent' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CAScore)],
+        ['query'],
+      ),
+    'listDocumentsByLinkedRecord' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(DocumentRecord)],
+        ['query'],
+      ),
+    'listDocumentsByType' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(DocumentRecord)],
+        ['query'],
+      ),
+    'listDocumentsByUploader' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(DocumentRecord)],
+        ['query'],
+      ),
+    'listHostelApplicationsByStatus' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(HostelApplication)],
+        ['query'],
+      ),
+    'listHostelApplicationsByStudent' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(HostelApplication)],
+        ['query'],
+      ),
     'listInvoicesByStudent' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(Invoice)],
@@ -603,17 +951,55 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Submission)],
         ['query'],
       ),
+    'listRegistrationsByCourse' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CourseRegistration)],
+        ['query'],
+      ),
+    'listRegistrationsByStudent' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CourseRegistration)],
+        ['query'],
+      ),
+    'listResultsByCourse' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(ExamResult)],
+        ['query'],
+      ),
+    'listResultsBySemester' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Vec(ExamResult)],
+        ['query'],
+      ),
+    'listResultsByStatus' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(ExamResult)],
+        ['query'],
+      ),
+    'listResultsByStudent' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(ExamResult)],
+        ['query'],
+      ),
     'listSubmissionsByAssignment' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(Submission)],
         ['query'],
       ),
     'markInvoicePaid' : IDL.Func([IDL.Text, IDL.Int], [], []),
+    'processHostelApplication' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int],
+        [],
+        [],
+      ),
     'processStaffRequest' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Int],
         [],
         [],
       ),
+    'publishResult' : IDL.Func([IDL.Text], [], []),
+    'registerCourse' : IDL.Func([CourseRegistration], [IDL.Text], []),
+    'rejectResult' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'reviewAppraisal' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [],
@@ -621,10 +1007,14 @@ export const idlFactory = ({ IDL }) => {
       ),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'submitAssignment' : IDL.Func([Submission], [IDL.Text], []),
+    'submitResultForApproval' : IDL.Func([IDL.Text], [], []),
     'submitSelfAppraisal' : IDL.Func([StaffAppraisal], [IDL.Text], []),
     'submitStaffRequest' : IDL.Func([StaffRequest], [IDL.Text], []),
     'updateAlumniProfile' : IDL.Func([IDL.Text, AlumniProfile], [], []),
+    'updateAnnouncement' : IDL.Func([IDL.Text, Announcement], [], []),
+    'updateCAScore' : IDL.Func([IDL.Text, CAScore], [], []),
     'updateCourse' : IDL.Func([IDL.Text, Course], [], []),
+    'updateExamResult' : IDL.Func([IDL.Text, ExamResult], [], []),
     'updateStaff' : IDL.Func([IDL.Text, StaffProfile], [], []),
     'updateStudent' : IDL.Func([IDL.Text, StudentProfile], [], []),
   });

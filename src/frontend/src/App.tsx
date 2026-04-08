@@ -1,12 +1,12 @@
+import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { useEffect, useState } from "react";
+import { createActor } from "./backend";
 import { AppLayout } from "./components/AppLayout";
 import { AssignmentProvider } from "./contexts/AssignmentContext";
 import { CBTProvider } from "./contexts/CBTContext";
 import { NotificationsProvider } from "./contexts/NotificationsContext";
 import { ResultProcessingProvider } from "./contexts/ResultProcessingContext";
 import { StaffRequestProvider } from "./contexts/StaffRequestContext";
-import { useActor } from "./hooks/useActor";
-import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { LoginPage } from "./pages/LoginPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
@@ -34,7 +34,7 @@ interface UserProfile {
 
 export default function App() {
   const { identity, login, clear, isInitializing } = useInternetIdentity();
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const isAuthenticated = !!identity;
 
   const [appState, setAppState] = useState<AppState>("loading");
@@ -48,7 +48,7 @@ export default function App() {
       return;
     }
     if (actor) {
-      actor
+      (actor as any)
         .getCallerUserProfile()
         .then((profile) => {
           if (profile?.role) {
@@ -71,7 +71,7 @@ export default function App() {
     setUserProfile(profile);
     if (actor) {
       try {
-        await actor.saveCallerUserProfile({
+        await (actor as any).saveCallerUserProfile({
           name: profile.name,
           email: profile.email,
           role: profile.role,
@@ -161,7 +161,16 @@ export default function App() {
                 | "donations-admin"
                 | "complaints-admin"
                 | "clearance-letter"
-                | "staff-directory"
+                | "document-verification"
+                | "disciplinary-records"
+                | "senate-minutes"
+                | "internal-memos"
+                | "data-export"
+                | "hostel-allocation"
+                | "hostel-transfers"
+                | "timetable-conflicts"
+                | "cbt-analytics"
+                | "cbt-resit"
             }
           />
         );
@@ -199,6 +208,7 @@ export default function App() {
                 | "payment-history"
                 | "complaints"
                 | "clearance-letter-student"
+                | "disciplinary-record"
             }
             userEmail={userProfile?.email ?? ""}
             userName={userProfile?.name ?? ""}
@@ -228,6 +238,7 @@ export default function App() {
                 | "student-records"
                 | "score-bulk-upload"
                 | "training-registration"
+                | "training-application"
                 | "staff-directory"
             }
           />
@@ -245,6 +256,10 @@ export default function App() {
                 | "receipts"
                 | "reconciliation"
                 | "student-records"
+                | "debt-aging"
+                | "installment-plans"
+                | "fee-waivers"
+                | "bursary-reconciliation"
             }
           />
         );
@@ -263,7 +278,9 @@ export default function App() {
                 | "appraisals"
                 | "student-records"
                 | "staff-training"
+                | "training-approval-hr"
                 | "staff-directory"
+                | "memos"
             }
           />
         );
@@ -284,6 +301,9 @@ export default function App() {
                 | "appraisal-review"
                 | "complaints-hod"
                 | "staff-directory"
+                | "training-approval-hod"
+                | "disciplinary-records"
+                | "memos"
             }
           />
         );
@@ -336,6 +356,16 @@ export default function App() {
                 | "complaints-admin"
                 | "clearance-letter"
                 | "staff-directory"
+                | "document-verification"
+                | "disciplinary-records"
+                | "senate-minutes"
+                | "internal-memos"
+                | "data-export"
+                | "hostel-allocation"
+                | "hostel-transfers"
+                | "timetable-conflicts"
+                | "cbt-analytics"
+                | "cbt-resit"
             }
           />
         );

@@ -1,7 +1,8 @@
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Bell, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createActor } from "../../backend";
 import { Card, CardContent } from "../../components/ui/card";
-import { useActor } from "../../hooks/useActor";
 import {
   type Announcement,
   getLocalAnnouncements,
@@ -14,7 +15,7 @@ const targetColors: Record<string, string> = {
 };
 
 export function Announcements() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(false);
 

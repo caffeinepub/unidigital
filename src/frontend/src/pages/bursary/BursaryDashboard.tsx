@@ -45,6 +45,10 @@ import {
   saveLocalPayments,
 } from "../../utils/sampleData";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
+import { BursaryReconciliation } from "./BursaryReconciliation";
+import { DebtAgingReport } from "./DebtAgingReport";
+import { FeeWaivers } from "./FeeWaivers";
+import { InstallmentPlans } from "./InstallmentPlans";
 import { PaymentReceipts } from "./PaymentReceipts";
 
 type Page =
@@ -55,7 +59,11 @@ type Page =
   | "reports"
   | "receipts"
   | "reconciliation"
-  | "student-records";
+  | "student-records"
+  | "debt-aging"
+  | "installment-plans"
+  | "fee-waivers"
+  | "bursary-reconciliation";
 interface Props {
   activePage: Page;
 }
@@ -1233,6 +1241,10 @@ export function BursaryDashboard({ activePage }: Props) {
   if (activePage === "receipts") return <PaymentReceipts />;
   if (activePage === "student-records")
     return <StudentRecordsList userRole="bursary" />;
+  if (activePage === "debt-aging") return <DebtAgingReport />;
+  if (activePage === "installment-plans") return <InstallmentPlans />;
+  if (activePage === "fee-waivers") return <FeeWaivers />;
+  if (activePage === "bursary-reconciliation") return <BursaryReconciliation />;
 
   return null;
 }

@@ -1,6 +1,8 @@
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Loader2, Megaphone, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../../backend";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
@@ -22,7 +24,6 @@ import {
 } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { Textarea } from "../../components/ui/textarea";
-import { useActor } from "../../hooks/useActor";
 import {
   type Announcement,
   getLocalAnnouncements,
@@ -38,7 +39,7 @@ const targetColors: Record<string, string> = {
 type LocalAnnouncement = Announcement & { isActive?: boolean };
 
 export function AnnouncementsAdmin() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [announcements, setAnnouncements] = useState<LocalAnnouncement[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialog, setDialog] = useState(false);

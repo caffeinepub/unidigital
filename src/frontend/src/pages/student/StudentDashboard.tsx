@@ -28,6 +28,7 @@ import { ClearanceLetterStudent } from "./ClearanceLetterStudent";
 import { CourseHistory } from "./CourseHistory";
 import { StudentCourseMaterials } from "./CourseMaterials";
 import { CourseRegistration } from "./CourseRegistration";
+import { DisciplinaryRecordStudent } from "./DisciplinaryRecordStudent";
 import { DocumentRequests } from "./DocumentRequests";
 import { ExamSchedule } from "./ExamSchedule";
 import { GPASummary } from "./GPASummary";
@@ -72,7 +73,8 @@ type Page =
   | "course-history"
   | "payment-history"
   | "complaints"
-  | "clearance-letter-student";
+  | "clearance-letter-student"
+  | "disciplinary-record";
 
 interface StudentDashboardProps {
   activePage: Page;
@@ -606,5 +608,7 @@ export function StudentDashboard({
   if (activePage === "complaints") return <StudentComplaints />;
   if (activePage === "clearance-letter-student")
     return <ClearanceLetterStudent studentName={userName} />;
+  if (activePage === "disciplinary-record")
+    return <DisciplinaryRecordStudent userEmail={userEmail} />;
   return null;
 }

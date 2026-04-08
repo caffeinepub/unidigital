@@ -66,12 +66,16 @@ import { AnalyticsV2 } from "./AnalyticsV2";
 import { AnnouncementsAdmin } from "./AnnouncementsAdmin";
 import { AppraisalAdmin } from "./AppraisalAdmin";
 import { AttendanceAdmin } from "./AttendanceAdmin";
+import { CBTAnalytics } from "./CBTAnalytics";
+import { CBTResitManager } from "./CBTResitManager";
 import { ClearanceLetter } from "./ClearanceLetter";
 import { CombinationCourses } from "./CombinationCourses";
 import { ComplaintsAdmin } from "./ComplaintsAdmin";
+import { DataExportCenter } from "./DataExportCenter";
 import { DataImport } from "./DataImport";
 import { DepartmentAnalytics } from "./DepartmentAnalytics";
 import { DocumentAdmin } from "./DocumentAdmin";
+import { DocumentVerificationPortal } from "./DocumentVerificationPortal";
 import { DocumentsScansAdmin } from "./DocumentsScansAdmin";
 import { DonationsAdmin } from "./DonationsAdmin";
 import { ExamScheduleAdmin } from "./ExamScheduleAdmin";
@@ -79,8 +83,11 @@ import { FacultyResults } from "./FacultyResults";
 import { GradeConfig } from "./GradeConfig";
 import { GraduationClearance } from "./GraduationClearance";
 import { HostelAdmin } from "./HostelAdmin";
+import { HostelAllocationMatrix } from "./HostelAllocationMatrix";
 import { HostelRoomInventory } from "./HostelRoomInventory";
+import { HostelTransferRequests } from "./HostelTransferRequests";
 import { InstitutionSettings } from "./InstitutionSettings";
+import { InternalMemoSystem } from "./InternalMemoSystem";
 import { LibraryAdmin } from "./LibraryAdmin";
 import { ProgressionAdmin } from "./ProgressionAdmin";
 import { RegistrationAdmin } from "./RegistrationAdmin";
@@ -88,8 +95,11 @@ import { ResultApprovalAdmin } from "./ResultApprovalAdmin";
 import { ResultPublication } from "./ResultPublication";
 import { ResultSheetAdmin } from "./ResultSheetAdmin";
 import { ScoreAuditLog } from "./ScoreAuditLog";
+import { SenateMeetingMinutes } from "./SenateMeetingMinutes";
 import { SenatePresentation } from "./SenatePresentation";
+import { StudentDisciplinaryRecords } from "./StudentDisciplinaryRecords";
 import { TimetableAdmin } from "./TimetableAdmin";
+import { TimetableConflictManager } from "./TimetableConflictManager";
 import { TranscriptAdmin } from "./TranscriptAdmin";
 
 type Page =
@@ -137,7 +147,17 @@ type Page =
   | "donations-admin"
   | "complaints-admin"
   | "clearance-letter"
-  | "staff-directory";
+  | "staff-directory"
+  | "document-verification"
+  | "disciplinary-records"
+  | "senate-minutes"
+  | "internal-memos"
+  | "data-export"
+  | "hostel-allocation"
+  | "hostel-transfers"
+  | "timetable-conflicts"
+  | "cbt-analytics"
+  | "cbt-resit";
 
 interface AdminDashboardProps {
   activePage: Page;
@@ -1310,5 +1330,17 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "clearance-letter") return <ClearanceLetter />;
   if (activePage === "staff-directory") return <StaffDirectory isAdmin />;
   if (activePage === "settings") return <InstitutionSettings />;
+  if (activePage === "document-verification")
+    return <DocumentVerificationPortal />;
+  if (activePage === "disciplinary-records")
+    return <StudentDisciplinaryRecords userRole="admin" />;
+  if (activePage === "senate-minutes") return <SenateMeetingMinutes />;
+  if (activePage === "internal-memos") return <InternalMemoSystem />;
+  if (activePage === "data-export") return <DataExportCenter />;
+  if (activePage === "hostel-allocation") return <HostelAllocationMatrix />;
+  if (activePage === "hostel-transfers") return <HostelTransferRequests />;
+  if (activePage === "timetable-conflicts") return <TimetableConflictManager />;
+  if (activePage === "cbt-analytics") return <CBTAnalytics />;
+  if (activePage === "cbt-resit") return <CBTResitManager />;
   return null;
 }

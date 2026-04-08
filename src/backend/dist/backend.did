@@ -1,0 +1,402 @@
+type _ImmutableObjectStorageRefillResult = 
+ record {
+   success: opt bool;
+   topped_up_amount: opt nat;
+ };
+type _ImmutableObjectStorageRefillInformation = record {
+                                                  proposed_top_up_amount:
+                                                   opt nat;};
+type _ImmutableObjectStorageCreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = 
+ record {
+   email: text;
+   name: text;
+   role: text;
+ };
+type Submission = 
+ record {
+   assignmentId: text;
+   feedback: opt text;
+   fileIds: vec text;
+   grade: opt text;
+   id: text;
+   studentMatric: text;
+   studentPrincipal: text;
+   submittedAt: int;
+ };
+type StudentProfile = 
+ record {
+   department: text;
+   email: text;
+   level: text;
+   matricNumber: text;
+   name: text;
+ };
+type StageRecord = 
+ record {
+   comment: text;
+   decidedAt: int;
+   decidedBy: text;
+   decision: text;
+   stage: text;
+ };
+type StaffRequest = 
+ record {
+   createdAt: int;
+   currentStage: ApprovalStage;
+   description: text;
+   id: text;
+   requestType: RequestType;
+   stageHistory: vec StageRecord;
+   status: RequestStatus;
+   submittedBy: principal;
+   submittedByName: text;
+ };
+type StaffProfile = 
+ record {
+   department: text;
+   designation: Designation;
+   email: text;
+   name: text;
+   staffId: text;
+ };
+type StaffAppraisal = 
+ record {
+   achievements: text;
+   cycle: AppraisalCycle;
+   department: text;
+   id: text;
+   kpis: text;
+   period: text;
+   reviewComment: opt text;
+   reviewScore: opt text;
+   reviewerName: text;
+   selfAppraisalText: text;
+   staffName: text;
+   staffPrincipal: principal;
+   status: AppraisalStatus;
+   submittedAt: int;
+   targetsNextPeriod: text;
+ };
+type RequestType = 
+ variant {
+   leave;
+   training;
+   travel;
+ };
+type RequestStatus = 
+ variant {
+   approved;
+   pending;
+   rejected;
+ };
+type ProgressionStage = 
+ record {
+   completedAt: int;
+   details: text;
+   stageName: text;
+   status: text;
+ };
+type Memo = 
+ record {
+   body: text;
+   createdAt: int;
+   senderName: text;
+   targetAudience: text;
+   title: text;
+ };
+type InvoiceStatus = 
+ variant {
+   paid;
+   pending;
+ };
+type Invoice = 
+ record {
+   amount: nat;
+   id: text;
+   paidAt: opt int;
+   semester: text;
+   status: InvoiceStatus;
+   studentMatric: text;
+ };
+type HostelApplication = 
+ record {
+   adminComment: text;
+   applicationDate: int;
+   assignedRoom: text;
+   department: text;
+   id: text;
+   level: text;
+   preferredBlock: text;
+   processedAt: int;
+   roomType: text;
+   specialNeeds: text;
+   status: text;
+   studentMatric: text;
+   studentName: text;
+ };
+type ExamResult = 
+ record {
+   approvalLevel: text;
+   caScore: nat;
+   courseCode: text;
+   courseTitle: text;
+   createdAt: int;
+   creditUnits: nat;
+   examScore: nat;
+   grade: text;
+   gradePoints: nat;
+   id: text;
+   rejectionReason: text;
+   remark: text;
+   semester: text;
+   session: text;
+   status: text;
+   studentMatric: text;
+   totalScore: nat;
+   updatedAt: int;
+ };
+type DocumentRecord = 
+ record {
+   blobId: text;
+   documentType: text;
+   id: text;
+   linkedRecordId: text;
+   linkedRecordType: text;
+   notes: text;
+   title: text;
+   uploadedAt: int;
+   uploaderName: text;
+   uploaderPrincipal: text;
+ };
+type Designation = 
+ variant {
+   admin;
+   bursary;
+   hr;
+   lecturer;
+   support;
+ };
+type CourseRegistration = 
+ record {
+   courseCode: text;
+   courseTitle: text;
+   creditUnits: nat;
+   id: text;
+   registeredAt: int;
+   semester: text;
+   session: text;
+   status: text;
+   studentMatric: text;
+ };
+type Course = 
+ record {
+   code: text;
+   creditUnits: nat;
+   department: text;
+   lecturerId: text;
+   semester: text;
+   title: text;
+ };
+type CAScore = 
+ record {
+   assignmentScore: nat;
+   attendanceScore: nat;
+   courseCode: text;
+   createdAt: int;
+   id: text;
+   lecturerName: text;
+   quizScore: nat;
+   semester: text;
+   session: text;
+   studentMatric: text;
+   testScore: nat;
+   totalCA: nat;
+ };
+type Assignment = 
+ record {
+   courseCode: text;
+   createdAt: int;
+   createdByLecturerId: text;
+   description: text;
+   dueDate: int;
+   id: text;
+   title: text;
+ };
+type ApprovalStage = 
+ variant {
+   dean;
+   dvc;
+   hod;
+   vc;
+ };
+type AppraisalStatus = 
+ variant {
+   draft;
+   finalized;
+   reviewed;
+   submitted;
+ };
+type AppraisalCycle = 
+ variant {
+   annual;
+   midYear;
+ };
+type Announcement = 
+ record {
+   body: text;
+   createdAt: int;
+   createdBy: text;
+   expiresAt: int;
+   id: text;
+   isActive: bool;
+   priority: text;
+   targetRoles: vec text;
+   title: text;
+ };
+type AlumniProfile = 
+ record {
+   department: text;
+   email: text;
+   employer: text;
+   graduationYear: nat;
+   jobTitle: text;
+   linkedIn: text;
+   location: text;
+   matricNumber: text;
+   name: text;
+ };
+type AcademicProgression = 
+ record {
+   stages: vec ProgressionStage;
+   studentMatric: text;
+ };
+service : {
+  _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
+  _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
+  _immutableObjectStorageConfirmBlobDeletion: (blobs: vec blob) -> ();
+  _immutableObjectStorageCreateCertificate: (blobHash: text) ->
+   (_ImmutableObjectStorageCreateCertificateResult);
+  _immutableObjectStorageRefillCashier: (refillInformation:
+   opt _ImmutableObjectStorageRefillInformation) ->
+   (_ImmutableObjectStorageRefillResult);
+  _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
+  _initializeAccessControl: () -> ();
+  addProgressionStage: (studentMatric: text, stage: ProgressionStage) -> ();
+  applyForHostel: (app: HostelApplication) -> (text);
+  approveRegistration: (id: text) -> ();
+  approveResult: (id: text, approverName: text, level: text) -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createAlumniProfile: (profile: AlumniProfile) -> ();
+  createAnnouncement: (ann: Announcement) -> (text);
+  createAssignment: (assignment: Assignment) -> (text);
+  createCAScore: (score: CAScore) -> (text);
+  createCourse: (course: Course) -> ();
+  createDocumentRecord: (doc: DocumentRecord) -> (text);
+  createExamResult: (result: ExamResult) -> (text);
+  createInvoice: (invoice: Invoice) -> (text);
+  createMemo: (memo: Memo) -> (text);
+  createProgressionRecord: (studentMatric: text) -> ();
+  createStaff: (staffProfile: StaffProfile) -> ();
+  createStudent: (student: StudentProfile) -> ();
+  deleteAnnouncement: (id: text) -> ();
+  dropCourse: (id: text) -> ();
+  finalizeAppraisal: (appraisalId: text) -> ();
+  getAllRegistrations: () -> (vec CourseRegistration) query;
+  getAlumniProfile: (matricNumber: text) -> (opt AlumniProfile) query;
+  getAnnouncement: (id: text) -> (opt Announcement) query;
+  getAppraisal: (id: text) -> (opt StaffAppraisal) query;
+  getCAScore: (id: text) -> (opt CAScore) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getCourse: (code: text) -> (opt Course) query;
+  getDocumentRecord: (id: text) -> (opt DocumentRecord) query;
+  getExamResult: (id: text) -> (opt ExamResult) query;
+  getHostelApplication: (id: text) -> (opt HostelApplication) query;
+  getMemo: (id: text) -> (opt Memo) query;
+  getProgressionRecord: (studentMatric: text) ->
+   (opt AcademicProgression) query;
+  getStaff: (staffId: text) -> (opt StaffProfile) query;
+  getStaffRequest: (requestId: text) -> (opt StaffRequest) query;
+  getStudentByEmail: (email: text) -> (opt StudentProfile) query;
+  getStudentByMatricNumber: (matricNumber: text) ->
+   (opt StudentProfile) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  gradeSubmission: (submissionId: text, grade: text, feedback: text) -> ();
+  isCallerAdmin: () -> (bool) query;
+  listActiveAnnouncements: () -> (vec Announcement) query;
+  listAllAlumni: () -> (vec AlumniProfile) query;
+  listAllAnnouncements: () -> (vec Announcement) query;
+  listAllAppraisals: () -> (vec StaffAppraisal) query;
+  listAllAssignments: () -> (vec Assignment) query;
+  listAllCourses: () -> (vec Course) query;
+  listAllDocuments: () -> (vec DocumentRecord) query;
+  listAllHostelApplications: () -> (vec HostelApplication) query;
+  listAllInvoices: () -> (vec Invoice) query;
+  listAllMemos: () -> (vec Memo) query;
+  listAllProgressionRecords: () -> (vec AcademicProgression) query;
+  listAllStaff: () -> (vec StaffProfile) query;
+  listAllStaffByStaffId: () -> (vec StaffProfile) query;
+  listAllStaffRequests: () -> (vec StaffRequest) query;
+  listAllStudents: () -> (vec StudentProfile) query;
+  listAllStudentsByMatricNumber: () -> (vec StudentProfile) query;
+  listAppraisalsByStaff: (staffPrincipal: principal) ->
+   (vec StaffAppraisal) query;
+  listAssignmentsByCourse: (courseCode: text) -> (vec Assignment) query;
+  listCAScoresByCourse: (courseCode: text) -> (vec CAScore) query;
+  listCAScoresByStudent: (studentMatric: text) -> (vec CAScore) query;
+  listDocumentsByLinkedRecord: (linkedRecordId: text) ->
+   (vec DocumentRecord) query;
+  listDocumentsByType: (documentType: text) -> (vec DocumentRecord) query;
+  listDocumentsByUploader: (uploaderPrincipal: text) ->
+   (vec DocumentRecord) query;
+  listHostelApplicationsByStatus: (status: text) ->
+   (vec HostelApplication) query;
+  listHostelApplicationsByStudent: (studentMatric: text) ->
+   (vec HostelApplication) query;
+  listInvoicesByStudent: (studentMatric: text) -> (vec Invoice) query;
+  listMyStaffRequests: () -> (vec StaffRequest) query;
+  listMySubmissions: (studentPrincipal: text) -> (vec Submission) query;
+  listRegistrationsByCourse: (courseCode: text) ->
+   (vec CourseRegistration) query;
+  listRegistrationsByStudent: (studentMatric: text) ->
+   (vec CourseRegistration) query;
+  listResultsByCourse: (courseCode: text) -> (vec ExamResult) query;
+  listResultsBySemester: (semester: text, session: text) ->
+   (vec ExamResult) query;
+  listResultsByStatus: (status: text) -> (vec ExamResult) query;
+  listResultsByStudent: (studentMatric: text) -> (vec ExamResult) query;
+  listSubmissionsByAssignment: (assignmentId: text) -> (vec Submission) query;
+  markInvoicePaid: (invoiceId: text, paidAt: int) -> ();
+  processHostelApplication: (id: text, status: text, assignedRoom: text,
+   comment: text, processedAt: int) -> ();
+  processStaffRequest: (requestId: text, decision: text, comment: text,
+   decidedBy: text, decidedAt: int) -> ();
+  publishResult: (id: text) -> ();
+  registerCourse: (reg: CourseRegistration) -> (text);
+  rejectResult: (id: text, reason: text) -> ();
+  reviewAppraisal: (appraisalId: text, reviewerName: text, reviewScore: 
+   text, reviewComment: text) -> ();
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  submitAssignment: (submission: Submission) -> (text);
+  submitResultForApproval: (id: text) -> ();
+  submitSelfAppraisal: (appraisal: StaffAppraisal) -> (text);
+  submitStaffRequest: (req: StaffRequest) -> (text);
+  updateAlumniProfile: (matricNumber: text, profile: AlumniProfile) -> ();
+  updateAnnouncement: (id: text, ann: Announcement) -> ();
+  updateCAScore: (id: text, score: CAScore) -> ();
+  updateCourse: (code: text, course: Course) -> ();
+  updateExamResult: (id: text, result: ExamResult) -> ();
+  updateStaff: (staffId: text, staffProfile: StaffProfile) -> ();
+  updateStudent: (matricNumber: text, student: StudentProfile) -> ();
+}

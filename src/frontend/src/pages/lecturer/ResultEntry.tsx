@@ -1,3 +1,4 @@
+import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
 import {
   AlertTriangle,
   Download,
@@ -8,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../../backend";
 import { DocumentScanner } from "../../components/DocumentScanner";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -30,9 +32,7 @@ import {
   getGradeFromScore,
   useResultProcessing,
 } from "../../contexts/ResultProcessingContext";
-import { useActor } from "../../hooks/useActor";
 import { getInstitutionSettings } from "../../hooks/useInstitutionSettings";
-import { useInternetIdentity } from "../../hooks/useInternetIdentity";
 import { downloadCSV, parseCSV } from "../../utils/csvUtils";
 import {
   type ExamResult,
@@ -51,7 +51,7 @@ export function ResultEntry() {
   const [semester, setSemester] = useState("2023/2024 First");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [attachedDocs, setAttachedDocs] = useState<Record<string, number>>({});
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const { identity } = useInternetIdentity();
   const { uploadFile } = useFileUpload();
   const uploadRef = useRef<HTMLInputElement>(null);

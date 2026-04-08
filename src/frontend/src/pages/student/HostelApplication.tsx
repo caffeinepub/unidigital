@@ -1,6 +1,8 @@
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Home, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../../backend";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -26,7 +28,6 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
-import { useActor } from "../../hooks/useActor";
 import {
   type HostelApplication as LocalHostelApp,
   getLocalHostelApps,
@@ -53,7 +54,7 @@ export function HostelApplication({
   department = "Computer Science",
   level = "300",
 }: Props) {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [apps, setApps] = useState<LocalHostelApp[]>(getLocalHostelApps());
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);

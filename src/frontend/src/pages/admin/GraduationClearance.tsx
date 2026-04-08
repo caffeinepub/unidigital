@@ -1,6 +1,8 @@
+import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { Camera, CheckCircle, Download, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../../backend";
 import { DocumentScanner } from "../../components/DocumentScanner";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -18,8 +20,6 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { useResultProcessing } from "../../contexts/ResultProcessingContext";
-import { useActor } from "../../hooks/useActor";
-import { useInternetIdentity } from "../../hooks/useInternetIdentity";
 import {
   type ClearanceRecord,
   getLocalCourses,
@@ -42,7 +42,7 @@ export function GraduationClearance() {
   const [attachedClearanceDocs, setAttachedClearanceDocs] = useState<
     Record<string, number>
   >({});
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const { identity } = useInternetIdentity();
   const { uploadFile } = useFileUpload();
 

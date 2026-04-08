@@ -1,6 +1,8 @@
+import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { Paperclip, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../../backend";
 import { DocumentScanner } from "../../components/DocumentScanner";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -20,8 +22,6 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { useResultProcessing } from "../../contexts/ResultProcessingContext";
-import { useActor } from "../../hooks/useActor";
-import { useInternetIdentity } from "../../hooks/useInternetIdentity";
 import {
   type CAScore,
   getLocalCourses,
@@ -39,7 +39,7 @@ export function CAEntry() {
     Record<string, { file: File; previewUrl: string }[]>
   >({});
   const [saving, setSaving] = useState(false);
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const { identity } = useInternetIdentity();
   const { uploadFile } = useFileUpload();
 

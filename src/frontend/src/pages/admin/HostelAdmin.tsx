@@ -1,6 +1,8 @@
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../../backend";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -34,7 +36,6 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { Textarea } from "../../components/ui/textarea";
-import { useActor } from "../../hooks/useActor";
 import {
   type HostelApplication,
   getLocalHostelApps,
@@ -49,7 +50,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function HostelAdmin() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [apps, setApps] = useState<HostelApplication[]>(getLocalHostelApps());
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");

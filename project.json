@@ -1,0 +1,29 @@
+{
+  "overview": "UniDigital is a comprehensive, enterprise-grade university portal automating all academic, administrative, and financial processes from admission to graduation. Features role-based dashboards for Admin, Lecturer, Student, Bursary, HR, and HOD with modules covering course registration, CBT exams, results pipeline, payroll, hostel management, graduation clearance, alumni portal, and more.",
+  "features": [
+    "Role-based dashboards for 6 stakeholder types",
+    "Complete results pipeline from Lecturer to Senate Board",
+    "CBT exam engine with question bank and analytics",
+    "Hostel room/bed allocation and occupancy management",
+    "Timetable with conflict detection and auto-resolve",
+    "Bursary finance depth with debt aging and reconciliation",
+    "Student disciplinary records and appeal workflow",
+    "Senate/Council meeting minutes archive",
+    "Internal memo/circular system with acknowledgment tracking",
+    "Data export center for all datasets"
+  ],
+  "category": "education",
+  "tags": [
+    "university",
+    "portal",
+    "education",
+    "academic",
+    "management",
+    "results",
+    "hostel",
+    "payroll",
+    "cbt",
+    "nigeria"
+  ],
+  "last_updated": "2026-04-08T13:21:00.869Z"
+}

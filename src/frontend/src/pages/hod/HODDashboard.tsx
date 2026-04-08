@@ -33,7 +33,9 @@ import {
 } from "../../utils/sampleData";
 import { ComplaintsAdmin } from "../admin/ComplaintsAdmin";
 import { DepartmentAnalytics } from "../admin/DepartmentAnalytics";
+import { StudentDisciplinaryRecords } from "../admin/StudentDisciplinaryRecords";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
+import { MemoAcknowledgment } from "../shared/MemoAcknowledgment";
 import { PassFailureLists } from "../shared/PassFailureLists";
 import { PromotionResults } from "../shared/PromotionResults";
 import { StaffDirectory } from "../shared/StaffDirectory";
@@ -42,6 +44,7 @@ import { AppraisalReview } from "./AppraisalReview";
 import { DepartmentResults } from "./DepartmentResults";
 import { HODSettings } from "./HODSettings";
 import { ResultEntryReview } from "./ResultEntryReview";
+import { TrainingApprovalHOD } from "./TrainingApprovalHOD";
 
 type Page =
   | "dashboard"
@@ -57,7 +60,10 @@ type Page =
   | "result-entry-review"
   | "appraisal-review"
   | "complaints-hod"
-  | "staff-directory";
+  | "staff-directory"
+  | "training-approval-hod"
+  | "disciplinary-records"
+  | "memos";
 interface Props {
   activePage: Page;
 }
@@ -172,6 +178,10 @@ export function HODDashboard({ activePage }: Props) {
   if (activePage === "appraisal-review") return <AppraisalReview />;
   if (activePage === "complaints-hod") return <ComplaintsAdmin />;
   if (activePage === "staff-directory") return <StaffDirectory />;
+  if (activePage === "training-approval-hod") return <TrainingApprovalHOD />;
+  if (activePage === "disciplinary-records")
+    return <StudentDisciplinaryRecords userRole="hod" />;
+  if (activePage === "memos") return <MemoAcknowledgment userRole="hod" />;
 
   if (activePage === "hod-students")
     return (

@@ -1,7 +1,28 @@
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Download, Eye, FileText, Filter, Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { DocumentRecord } from "../../backend.d";
+import { createActor } from "../../backend";
 import { Badge } from "../../components/ui/badge";
+
+interface DocumentRecord {
+  id: string;
+  title: string;
+  documentType: string;
+  blobId: string;
+  uploaderPrincipal: string;
+  uploaderName: string;
+  linkedRecordId: string;
+  linkedRecordType: string;
+  uploadedAt: bigint;
+  notes: string;
+  // legacy compat fields
+  type?: string;
+  studentMatric?: string;
+  studentName?: string;
+  fileName?: string;
+  fileUrl?: string;
+  status?: "pending" | "verified" | "rejected";
+}
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -25,7 +46,6 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { useActor } from "../../hooks/useActor";
 
 const DOC_TYPE_COLORS: Record<string, string> = {
   admission: "bg-blue-100 text-blue-700",
@@ -91,7 +111,7 @@ const SAMPLE_DOCS: DocumentRecord[] = [
 ];
 
 export function DocumentsScansAdmin() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [docs, setDocs] = useState<DocumentRecord[]>(SAMPLE_DOCS);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

@@ -25,6 +25,17 @@ export interface AlumniProfile {
   'department' : string,
   'location' : string,
 }
+export interface Announcement {
+  'id' : string,
+  'title' : string,
+  'expiresAt' : bigint,
+  'body' : string,
+  'createdAt' : bigint,
+  'createdBy' : string,
+  'isActive' : boolean,
+  'targetRoles' : Array<string>,
+  'priority' : string,
+}
 export type AppraisalCycle = { 'annual' : null } |
   { 'midYear' : null };
 export type AppraisalStatus = { 'submitted' : null } |
@@ -44,6 +55,20 @@ export interface Assignment {
   'createdByLecturerId' : string,
   'courseCode' : string,
 }
+export interface CAScore {
+  'id' : string,
+  'semester' : string,
+  'quizScore' : bigint,
+  'testScore' : bigint,
+  'totalCA' : bigint,
+  'createdAt' : bigint,
+  'assignmentScore' : bigint,
+  'lecturerName' : string,
+  'session' : string,
+  'attendanceScore' : bigint,
+  'studentMatric' : string,
+  'courseCode' : string,
+}
 export interface Course {
   'title' : string,
   'semester' : string,
@@ -52,11 +77,69 @@ export interface Course {
   'department' : string,
   'lecturerId' : string,
 }
+export interface CourseRegistration {
+  'id' : string,
+  'status' : string,
+  'semester' : string,
+  'session' : string,
+  'creditUnits' : bigint,
+  'studentMatric' : string,
+  'courseTitle' : string,
+  'courseCode' : string,
+  'registeredAt' : bigint,
+}
 export type Designation = { 'hr' : null } |
   { 'admin' : null } |
   { 'lecturer' : null } |
   { 'support' : null } |
   { 'bursary' : null };
+export interface DocumentRecord {
+  'id' : string,
+  'title' : string,
+  'documentType' : string,
+  'uploaderName' : string,
+  'uploaderPrincipal' : string,
+  'linkedRecordType' : string,
+  'notes' : string,
+  'linkedRecordId' : string,
+  'blobId' : string,
+  'uploadedAt' : bigint,
+}
+export interface ExamResult {
+  'id' : string,
+  'remark' : string,
+  'status' : string,
+  'semester' : string,
+  'createdAt' : bigint,
+  'rejectionReason' : string,
+  'gradePoints' : bigint,
+  'examScore' : bigint,
+  'totalScore' : bigint,
+  'updatedAt' : bigint,
+  'session' : string,
+  'grade' : string,
+  'creditUnits' : bigint,
+  'studentMatric' : string,
+  'courseTitle' : string,
+  'courseCode' : string,
+  'caScore' : bigint,
+  'approvalLevel' : string,
+}
+export interface HostelApplication {
+  'id' : string,
+  'status' : string,
+  'studentName' : string,
+  'level' : string,
+  'processedAt' : bigint,
+  'preferredBlock' : string,
+  'adminComment' : string,
+  'studentMatric' : string,
+  'assignedRoom' : string,
+  'department' : string,
+  'roomType' : string,
+  'applicationDate' : bigint,
+  'specialNeeds' : string,
+}
 export interface Invoice {
   'id' : string,
   'status' : InvoiceStatus,
@@ -153,50 +236,68 @@ export interface UserProfile {
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
-export interface _CaffeineStorageCreateCertificateResult {
+export interface _ImmutableObjectStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
 }
-export interface _CaffeineStorageRefillInformation {
+export interface _ImmutableObjectStorageRefillInformation {
   'proposed_top_up_amount' : [] | [bigint],
 }
-export interface _CaffeineStorageRefillResult {
+export interface _ImmutableObjectStorageRefillResult {
   'success' : [] | [boolean],
   'topped_up_amount' : [] | [bigint],
 }
 export interface _SERVICE {
-  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
-  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
-  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
+  '_immutableObjectStorageBlobsAreLive' : ActorMethod<
+    [Array<Uint8Array>],
+    Array<boolean>
+  >,
+  '_immutableObjectStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_immutableObjectStorageConfirmBlobDeletion' : ActorMethod<
     [Array<Uint8Array>],
     undefined
   >,
-  '_caffeineStorageCreateCertificate' : ActorMethod<
+  '_immutableObjectStorageCreateCertificate' : ActorMethod<
     [string],
-    _CaffeineStorageCreateCertificateResult
+    _ImmutableObjectStorageCreateCertificateResult
   >,
-  '_caffeineStorageRefillCashier' : ActorMethod<
-    [[] | [_CaffeineStorageRefillInformation]],
-    _CaffeineStorageRefillResult
+  '_immutableObjectStorageRefillCashier' : ActorMethod<
+    [[] | [_ImmutableObjectStorageRefillInformation]],
+    _ImmutableObjectStorageRefillResult
   >,
-  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  '_immutableObjectStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
+  '_initializeAccessControl' : ActorMethod<[], undefined>,
   'addProgressionStage' : ActorMethod<[string, ProgressionStage], undefined>,
+  'applyForHostel' : ActorMethod<[HostelApplication], string>,
+  'approveRegistration' : ActorMethod<[string], undefined>,
+  'approveResult' : ActorMethod<[string, string, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createAlumniProfile' : ActorMethod<[AlumniProfile], undefined>,
+  'createAnnouncement' : ActorMethod<[Announcement], string>,
   'createAssignment' : ActorMethod<[Assignment], string>,
+  'createCAScore' : ActorMethod<[CAScore], string>,
   'createCourse' : ActorMethod<[Course], undefined>,
+  'createDocumentRecord' : ActorMethod<[DocumentRecord], string>,
+  'createExamResult' : ActorMethod<[ExamResult], string>,
   'createInvoice' : ActorMethod<[Invoice], string>,
   'createMemo' : ActorMethod<[Memo], string>,
   'createProgressionRecord' : ActorMethod<[string], undefined>,
   'createStaff' : ActorMethod<[StaffProfile], undefined>,
   'createStudent' : ActorMethod<[StudentProfile], undefined>,
+  'deleteAnnouncement' : ActorMethod<[string], undefined>,
+  'dropCourse' : ActorMethod<[string], undefined>,
   'finalizeAppraisal' : ActorMethod<[string], undefined>,
+  'getAllRegistrations' : ActorMethod<[], Array<CourseRegistration>>,
   'getAlumniProfile' : ActorMethod<[string], [] | [AlumniProfile]>,
+  'getAnnouncement' : ActorMethod<[string], [] | [Announcement]>,
   'getAppraisal' : ActorMethod<[string], [] | [StaffAppraisal]>,
+  'getCAScore' : ActorMethod<[string], [] | [CAScore]>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCourse' : ActorMethod<[string], [] | [Course]>,
+  'getDocumentRecord' : ActorMethod<[string], [] | [DocumentRecord]>,
+  'getExamResult' : ActorMethod<[string], [] | [ExamResult]>,
+  'getHostelApplication' : ActorMethod<[string], [] | [HostelApplication]>,
   'getMemo' : ActorMethod<[string], [] | [Memo]>,
   'getProgressionRecord' : ActorMethod<[string], [] | [AcademicProgression]>,
   'getStaff' : ActorMethod<[string], [] | [StaffProfile]>,
@@ -206,10 +307,14 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'gradeSubmission' : ActorMethod<[string, string, string], undefined>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'listActiveAnnouncements' : ActorMethod<[], Array<Announcement>>,
   'listAllAlumni' : ActorMethod<[], Array<AlumniProfile>>,
+  'listAllAnnouncements' : ActorMethod<[], Array<Announcement>>,
   'listAllAppraisals' : ActorMethod<[], Array<StaffAppraisal>>,
   'listAllAssignments' : ActorMethod<[], Array<Assignment>>,
   'listAllCourses' : ActorMethod<[], Array<Course>>,
+  'listAllDocuments' : ActorMethod<[], Array<DocumentRecord>>,
+  'listAllHostelApplications' : ActorMethod<[], Array<HostelApplication>>,
   'listAllInvoices' : ActorMethod<[], Array<Invoice>>,
   'listAllMemos' : ActorMethod<[], Array<Memo>>,
   'listAllProgressionRecords' : ActorMethod<[], Array<AcademicProgression>>,
@@ -220,22 +325,58 @@ export interface _SERVICE {
   'listAllStudentsByMatricNumber' : ActorMethod<[], Array<StudentProfile>>,
   'listAppraisalsByStaff' : ActorMethod<[Principal], Array<StaffAppraisal>>,
   'listAssignmentsByCourse' : ActorMethod<[string], Array<Assignment>>,
+  'listCAScoresByCourse' : ActorMethod<[string], Array<CAScore>>,
+  'listCAScoresByStudent' : ActorMethod<[string], Array<CAScore>>,
+  'listDocumentsByLinkedRecord' : ActorMethod<[string], Array<DocumentRecord>>,
+  'listDocumentsByType' : ActorMethod<[string], Array<DocumentRecord>>,
+  'listDocumentsByUploader' : ActorMethod<[string], Array<DocumentRecord>>,
+  'listHostelApplicationsByStatus' : ActorMethod<
+    [string],
+    Array<HostelApplication>
+  >,
+  'listHostelApplicationsByStudent' : ActorMethod<
+    [string],
+    Array<HostelApplication>
+  >,
   'listInvoicesByStudent' : ActorMethod<[string], Array<Invoice>>,
   'listMyStaffRequests' : ActorMethod<[], Array<StaffRequest>>,
   'listMySubmissions' : ActorMethod<[string], Array<Submission>>,
+  'listRegistrationsByCourse' : ActorMethod<
+    [string],
+    Array<CourseRegistration>
+  >,
+  'listRegistrationsByStudent' : ActorMethod<
+    [string],
+    Array<CourseRegistration>
+  >,
+  'listResultsByCourse' : ActorMethod<[string], Array<ExamResult>>,
+  'listResultsBySemester' : ActorMethod<[string, string], Array<ExamResult>>,
+  'listResultsByStatus' : ActorMethod<[string], Array<ExamResult>>,
+  'listResultsByStudent' : ActorMethod<[string], Array<ExamResult>>,
   'listSubmissionsByAssignment' : ActorMethod<[string], Array<Submission>>,
   'markInvoicePaid' : ActorMethod<[string, bigint], undefined>,
+  'processHostelApplication' : ActorMethod<
+    [string, string, string, string, bigint],
+    undefined
+  >,
   'processStaffRequest' : ActorMethod<
     [string, string, string, string, bigint],
     undefined
   >,
+  'publishResult' : ActorMethod<[string], undefined>,
+  'registerCourse' : ActorMethod<[CourseRegistration], string>,
+  'rejectResult' : ActorMethod<[string, string], undefined>,
   'reviewAppraisal' : ActorMethod<[string, string, string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'submitAssignment' : ActorMethod<[Submission], string>,
+  'submitResultForApproval' : ActorMethod<[string], undefined>,
   'submitSelfAppraisal' : ActorMethod<[StaffAppraisal], string>,
   'submitStaffRequest' : ActorMethod<[StaffRequest], string>,
   'updateAlumniProfile' : ActorMethod<[string, AlumniProfile], undefined>,
+  'updateAnnouncement' : ActorMethod<[string, Announcement], undefined>,
+  'updateCAScore' : ActorMethod<[string, CAScore], undefined>,
   'updateCourse' : ActorMethod<[string, Course], undefined>,
+  'updateExamResult' : ActorMethod<[string, ExamResult], undefined>,
   'updateStaff' : ActorMethod<[string, StaffProfile], undefined>,
   'updateStudent' : ActorMethod<[string, StudentProfile], undefined>,
 }

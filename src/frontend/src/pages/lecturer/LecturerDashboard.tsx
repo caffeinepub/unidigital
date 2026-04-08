@@ -35,6 +35,7 @@ import {
   gradeFromScore,
 } from "../../utils/sampleData";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
+import { MemoAcknowledgment } from "../shared/MemoAcknowledgment";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AppraisalSelf } from "./AppraisalSelf";
@@ -48,6 +49,7 @@ import { LecturerTimetable } from "./LecturerTimetable";
 import { ResultApprovalLecturer } from "./ResultApprovalLecturer";
 import { ResultEntry } from "./ResultEntry";
 import { ScoreBulkUpload } from "./ScoreBulkUpload";
+import { TrainingApplicationForm } from "./TrainingApplicationForm";
 import { TrainingRegistration } from "./TrainingRegistration";
 
 type Page =
@@ -72,6 +74,7 @@ type Page =
   | "biometric-attendance"
   | "score-bulk-upload"
   | "training-registration"
+  | "training-application"
   | "staff-directory";
 
 interface Props {
@@ -83,7 +86,6 @@ export function LecturerDashboard({ activePage }: Props) {
   const [courses, _setCourses] = useState(getLocalCourses());
   const [students, _setStudents] = useState(getLocalStudents());
   const [results, _setResults] = useState(getLocalResults());
-  const [memos, _setMemos] = useState(getLocalMemos());
 
   const myCourses = courses;
   const myCourseCodes = courses.map((c) => c.code);
@@ -394,31 +396,7 @@ export function LecturerDashboard({ activePage }: Props) {
   }
 
   if (activePage === "memos") {
-    return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-800">Memos</h1>
-        {memos.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center text-slate-400">
-              No memos.
-            </CardContent>
-          </Card>
-        )}
-        {memos.map((m) => (
-          <Card key={m.id}>
-            <CardContent className="p-5">
-              <div className="flex justify-between">
-                <h3 className="font-semibold">{m.title}</h3>
-                <span className="text-xs text-slate-400">
-                  {new Date(m.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              <p className="text-sm text-slate-600 mt-2">{m.body}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
+    return <MemoAcknowledgment userRole="lecturer" />;
   }
 
   if (activePage === "timetable")
@@ -440,6 +418,7 @@ export function LecturerDashboard({ activePage }: Props) {
   if (activePage === "biometric-attendance") return <BiometricAttendance />;
   if (activePage === "score-bulk-upload") return <ScoreBulkUpload />;
   if (activePage === "training-registration") return <TrainingRegistration />;
+  if (activePage === "training-application") return <TrainingApplicationForm />;
   if (activePage === "staff-directory") return <StaffDirectory />;
 
   return null;
