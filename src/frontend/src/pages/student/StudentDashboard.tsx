@@ -35,6 +35,7 @@ import { CourseRegistration } from "./CourseRegistration";
 import { Deferment } from "./Deferment";
 import { DepartmentTransfer } from "./DepartmentTransfer";
 import { DisciplinaryRecordStudent } from "./DisciplinaryRecordStudent";
+import { DistanceLearning } from "./DistanceLearning";
 import { DocumentRequests } from "./DocumentRequests";
 import { ExamSchedule } from "./ExamSchedule";
 import { FeeClearance } from "./FeeClearance";
@@ -44,6 +45,7 @@ import { GraduationStatus } from "./GraduationStatus";
 import { GraduationTracker } from "./GraduationTracker";
 import { HostelApplication } from "./HostelApplication";
 import { MyCertificates } from "./MyCertificates";
+import { PartTimeStudies } from "./PartTimeStudies";
 import { PaymentHistory } from "./PaymentHistory";
 import { ResultSlip } from "./ResultSlip";
 import { ScholarshipApplication } from "./ScholarshipApplication";
@@ -99,7 +101,9 @@ type Page =
   | "announcements-view"
   | "communication-center"
   | "my-certificates"
-  | "graduation-tracker";
+  | "graduation-tracker"
+  | "distance-learning"
+  | "part-time-studies";
 
 interface StudentDashboardProps {
   activePage: Page;
@@ -675,5 +679,9 @@ export function StudentDashboard({
         <MyCertificates userName={userName} userEmail={userEmail} />
       </GatedRoute>
     );
+  if (activePage === "distance-learning")
+    return <DistanceLearning userEmail={userEmail} userName={userName} />;
+  if (activePage === "part-time-studies")
+    return <PartTimeStudies userEmail={userEmail} userName={userName} />;
   return null;
 }

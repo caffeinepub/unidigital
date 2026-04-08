@@ -363,6 +363,8 @@ export default function App() {
                 | "communication-center"
                 | "my-certificates"
                 | "graduation-tracker"
+                | "distance-learning"
+                | "part-time-studies"
             }
             userEmail={userProfile?.email ?? ""}
             userName={userName}

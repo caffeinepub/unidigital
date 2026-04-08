@@ -35,6 +35,7 @@ import {
   Megaphone,
   Menu,
   MessageSquare,
+  Moon,
   NotebookText,
   Receipt,
   RefreshCw,
@@ -584,6 +585,16 @@ const navByRole: Record<string, NavItem[]> = {
       label: "My Certificates",
       icon: <Award size={18} />,
       key: "my-certificates",
+    },
+    {
+      label: "Distance Learning",
+      icon: <Globe size={18} />,
+      key: "distance-learning",
+    },
+    {
+      label: "Part-Time Studies",
+      icon: <Moon size={18} />,
+      key: "part-time-studies",
     },
     {
       label: "My Profile",
