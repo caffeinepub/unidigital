@@ -31,10 +31,12 @@ import {
   getLocalCourses,
   getLocalStudents,
 } from "../../utils/sampleData";
+import { ComplaintsAdmin } from "../admin/ComplaintsAdmin";
 import { DepartmentAnalytics } from "../admin/DepartmentAnalytics";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
 import { PassFailureLists } from "../shared/PassFailureLists";
 import { PromotionResults } from "../shared/PromotionResults";
+import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AppraisalReview } from "./AppraisalReview";
 import { DepartmentResults } from "./DepartmentResults";
@@ -53,7 +55,9 @@ type Page =
   | "promotion-results"
   | "pass-fail-lists"
   | "result-entry-review"
-  | "appraisal-review";
+  | "appraisal-review"
+  | "complaints-hod"
+  | "staff-directory";
 interface Props {
   activePage: Page;
 }
@@ -166,6 +170,8 @@ export function HODDashboard({ activePage }: Props) {
 
   if (activePage === "result-entry-review") return <ResultEntryReview />;
   if (activePage === "appraisal-review") return <AppraisalReview />;
+  if (activePage === "complaints-hod") return <ComplaintsAdmin />;
+  if (activePage === "staff-directory") return <StaffDirectory />;
 
   if (activePage === "hod-students")
     return (

@@ -24,6 +24,7 @@ import { AcademicProgression } from "./AcademicProgression";
 import { AcademicStatusStudent } from "./AcademicStatusStudent";
 import { AcademicTranscript } from "./AcademicTranscript";
 import { Announcements } from "./Announcements";
+import { ClearanceLetterStudent } from "./ClearanceLetterStudent";
 import { CourseHistory } from "./CourseHistory";
 import { StudentCourseMaterials } from "./CourseMaterials";
 import { CourseRegistration } from "./CourseRegistration";
@@ -32,10 +33,12 @@ import { ExamSchedule } from "./ExamSchedule";
 import { GPASummary } from "./GPASummary";
 import { GraduationStatus } from "./GraduationStatus";
 import { HostelApplication } from "./HostelApplication";
+import { PaymentHistory } from "./PaymentHistory";
 import { ResultSlip } from "./ResultSlip";
 import { StudentAcademicRecord } from "./StudentAcademicRecord";
 import { StudentAssignments } from "./StudentAssignments";
 import { StudentAttendance } from "./StudentAttendance";
+import { StudentComplaints } from "./StudentComplaints";
 import { StudentFees } from "./StudentFees";
 import { StudentLibrary } from "./StudentLibrary";
 import { StudentTimetable } from "./StudentTimetable";
@@ -67,7 +70,9 @@ type Page =
   | "academic-record"
   | "course-materials"
   | "course-history"
-  | "payment-history";
+  | "payment-history"
+  | "complaints"
+  | "clearance-letter-student";
 
 interface StudentDashboardProps {
   activePage: Page;
@@ -596,7 +601,10 @@ export function StudentDashboard({
   if (activePage === "course-history")
     return <CourseHistory userEmail={userEmail} />;
   if (activePage === "payment-history")
-    return <StudentFees invoice={myInvoice} />;
+    return <PaymentHistory userName={userName} />;
 
+  if (activePage === "complaints") return <StudentComplaints />;
+  if (activePage === "clearance-letter-student")
+    return <ClearanceLetterStudent studentName={userName} />;
   return null;
 }

@@ -151,7 +151,17 @@ export default function App() {
                 | "senate-presentation"
                 | "student-records"
                 | "pass-fail-lists"
+                | "hostel-room-inventory"
+                | "donations-admin"
+                | "complaints-admin"
+                | "clearance-letter"
+                | "staff-directory"
                 | "analytics-dashboard"
+                | "hostel-room-inventory"
+                | "donations-admin"
+                | "complaints-admin"
+                | "clearance-letter"
+                | "staff-directory"
             }
           />
         );
@@ -187,6 +197,8 @@ export default function App() {
                 | "course-materials"
                 | "course-history"
                 | "payment-history"
+                | "complaints"
+                | "clearance-letter-student"
             }
             userEmail={userProfile?.email ?? ""}
             userName={userProfile?.name ?? ""}
@@ -214,6 +226,9 @@ export default function App() {
                 | "appraisal-self"
                 | "combined-results"
                 | "student-records"
+                | "score-bulk-upload"
+                | "training-registration"
+                | "staff-directory"
             }
           />
         );
@@ -247,6 +262,8 @@ export default function App() {
                 | "payroll"
                 | "appraisals"
                 | "student-records"
+                | "staff-training"
+                | "staff-directory"
             }
           />
         );
@@ -265,6 +282,8 @@ export default function App() {
                 | "pass-fail-lists"
                 | "result-entry-review"
                 | "appraisal-review"
+                | "complaints-hod"
+                | "staff-directory"
             }
           />
         );
@@ -312,6 +331,11 @@ export default function App() {
                 | "senate-presentation"
                 | "student-records"
                 | "pass-fail-lists"
+                | "hostel-room-inventory"
+                | "donations-admin"
+                | "complaints-admin"
+                | "clearance-letter"
+                | "staff-directory"
             }
           />
         );

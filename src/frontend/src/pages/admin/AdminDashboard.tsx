@@ -56,6 +56,7 @@ import {
 import { AcademicCalendar } from "../shared/AcademicCalendar";
 import { PassFailureLists } from "../shared/PassFailureLists";
 import { PromotionResults } from "../shared/PromotionResults";
+import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AIDashboard } from "./AIDashboard";
 import { AcademicStatus } from "./AcademicStatus";
@@ -65,16 +66,20 @@ import { AnalyticsV2 } from "./AnalyticsV2";
 import { AnnouncementsAdmin } from "./AnnouncementsAdmin";
 import { AppraisalAdmin } from "./AppraisalAdmin";
 import { AttendanceAdmin } from "./AttendanceAdmin";
+import { ClearanceLetter } from "./ClearanceLetter";
 import { CombinationCourses } from "./CombinationCourses";
+import { ComplaintsAdmin } from "./ComplaintsAdmin";
 import { DataImport } from "./DataImport";
 import { DepartmentAnalytics } from "./DepartmentAnalytics";
 import { DocumentAdmin } from "./DocumentAdmin";
 import { DocumentsScansAdmin } from "./DocumentsScansAdmin";
+import { DonationsAdmin } from "./DonationsAdmin";
 import { ExamScheduleAdmin } from "./ExamScheduleAdmin";
 import { FacultyResults } from "./FacultyResults";
 import { GradeConfig } from "./GradeConfig";
 import { GraduationClearance } from "./GraduationClearance";
 import { HostelAdmin } from "./HostelAdmin";
+import { HostelRoomInventory } from "./HostelRoomInventory";
 import { InstitutionSettings } from "./InstitutionSettings";
 import { LibraryAdmin } from "./LibraryAdmin";
 import { ProgressionAdmin } from "./ProgressionAdmin";
@@ -127,7 +132,12 @@ type Page =
   | "settings"
   | "promotion-results"
   | "pass-fail-lists"
-  | "analytics-dashboard";
+  | "analytics-dashboard"
+  | "hostel-room-inventory"
+  | "donations-admin"
+  | "complaints-admin"
+  | "clearance-letter"
+  | "staff-directory";
 
 interface AdminDashboardProps {
   activePage: Page;
@@ -1294,6 +1304,11 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "pass-fail-lists")
     return <PassFailureLists userRole="admin" />;
   if (activePage === "analytics-dashboard") return <AnalyticsDashboard />;
+  if (activePage === "hostel-room-inventory") return <HostelRoomInventory />;
+  if (activePage === "donations-admin") return <DonationsAdmin />;
+  if (activePage === "complaints-admin") return <ComplaintsAdmin />;
+  if (activePage === "clearance-letter") return <ClearanceLetter />;
+  if (activePage === "staff-directory") return <StaffDirectory isAdmin />;
   if (activePage === "settings") return <InstitutionSettings />;
   return null;
 }

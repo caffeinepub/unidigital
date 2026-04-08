@@ -29,13 +29,15 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { AlumniDonations } from "./AlumniDonations";
 
 export type AlumniPage =
   | "dashboard"
   | "directory"
   | "jobs"
   | "events"
-  | "profile";
+  | "profile"
+  | "donations";
 
 interface Props {
   activePage: AlumniPage;
@@ -677,5 +679,6 @@ export function AlumniDashboard({ activePage }: Props) {
       </div>
     );
 
+  if (activePage === "donations") return <AlumniDonations />;
   return null;
 }

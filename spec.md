@@ -1,42 +1,54 @@
-# UniDigital v20
+# UniDigital v21
 
 ## Current State
-v19 is live with 19 real students, institution-adaptive academic record formats (NCE/Undergraduate/ND-HND), full result chain, pass/fail lists, promotion results, settings, module gating, and all previous modules.
+UniDigital v20 is deployed with the following key modules live across all roles:
+- Role-based dashboards (Admin, Lecturer, Student, Bursary, HR, HOD, Alumni)
+- Full result chain (Lecturer entry → HOD review → Faculty/Exam Officer → Senate Presentation)
+- Student Academic Records (adaptive: NCE/Undergraduate/ND-HND), Department Results, Faculty Results, Promotion Results, Pass/Fail Lists
+- CBT exams with question bank, timer, auto-submit, analytics
+- Payroll (CONTISS), Bursary (bulk invoicing, debt tracking), Notifications, Module Gating
+- Settings module (institution profile, confirmation, system toggles)
+- Graduation Clearance workflow, Course History, Course Materials, Biometric Attendance simulation
+- Appraisal (self-assessment + HOD review), Analytics Dashboard (KPI charts)
+- Alumni Portal (directory, jobs, events), Admission Application Portal
+- Research & Publications, Conference Room Booking, Staff Leave Balance Dashboard
+- Accreditation/Audit Report Generator, Student Records (all roles), Hostel Admin (application management)
+- Timetable Admin (manual CRUD), Result Slip (student), Graduation Status (student)
+- 19 real seeded students with institution-adaptive academic records
 
 ## Requested Changes (Diff)
 
 ### Add
-1. **Graduation Clearance Workflow** -- multi-step clearance checklist (Library, Bursary, Hostel, Dean sign-off) per student; Admin/HOD track clearance status per student; student sees clearance progress and graduation approval status
-2. **Result Entry by Lecturers** -- online CA/exam score entry form per course (CA max 40, Exam max 60, Total auto-calculated); validation; submit to HOD for review; HOD approves/rejects
-3. **Student Portal Deepening** -- fee payment history tab, registered course history, result slip download per semester, graduation status tracker
-4. **Timetable/Scheduling Automation** -- conflict detection when adding courses, room assignment, auto-generate timetable from available courses/rooms/staff data
-5. **Alumni Portal** -- alumni registration form, searchable alumni directory, job board (post/browse jobs), donation/fund drive tracker
-6. **Staff Appraisal/Performance Review** -- annual appraisal forms with self-assessment, HOD/HR scoring and review, summary report per staff
-7. **Hostel Management Depth** -- room/bed allocation per student, occupancy report, hostel fee tracking, room transfer requests
-8. **e-Learning/Course Materials** -- Lecturers upload notes/resources per course; students access materials per registered course
-9. **Biometric Attendance** -- simulated check-in/check-out, attendance dashboard per course/staff, absentee alert notifications
-10. **Dashboard Analytics Upgrade** -- institution-wide KPI dashboard (enrollment trends, pass rates, fee collection, staff ratios, charts)
+- **Hostel Room Inventory** (Admin): Room/bed management page with block/room/bed-count, bed allocation per student, occupancy heatmap, hostel fee ledger per room, and room transfer request approval
+- **Timetable Conflict Detection** (Admin): On slot save, detect conflicts (same room+time, same lecturer+time, same course+time), show conflict warnings inline; "Auto-Fix" button suggests non-overlapping time slots
+- **Student Fee Payment History** (Student): Dedicated payment history page showing all invoices, amounts paid, balance, receipt number, and print receipt per payment
+- **Alumni Donation/Fund Drive Tracker** (Alumni + Admin): Alumni can pledge/donate to fund drives; Admin can create fund drives, view pledges/amounts, track targets
+- **Staff Training & Development Module** (HR + Staff/Lecturer): HR creates training programs; Staff/Lecturers register for workshops; HR tracks attendance and issues completion certificates
+- **Score Sheet Bulk Upload** (Lecturer/Admin): Downloadable CSV template per course; bulk upload scores from CSV with validation (CA max 40, Exam max 60); error rows flagged inline
+- **Student Complaints & Feedback Module** (Student + Admin/HOD): Students submit complaints or feedback with category (academic, facility, staff, other), urgency, and description; Admin/HOD views all complaints, updates status (open/in-review/resolved), responds
+- **Clearance Letter Generation** (Admin + Student): For students who pass all clearance checks, generate a printable institution-branded clearance letter with student details, MIS footer, authorized signature block
+- **Staff Directory** (All roles): Searchable staff profiles with name, department, designation, qualifications, contact (email), date joined; Admin can add/edit staff profiles
 
 ### Modify
-- Student sidebar: add Graduation Clearance, Course Materials, Result Slip, Graduation Status
-- Lecturer sidebar: add Result Entry, Course Materials, Biometric Attendance
-- Admin sidebar: add Graduation Clearance, Alumni Portal, Staff Appraisal, Dashboard Analytics
-- HOD sidebar: add Result Entry Review, Staff Appraisal
-- HR sidebar: add Staff Appraisal
-- Hostel module: deepen with room/bed allocation and occupancy
+- **Hostel Admin**: Extend existing HostelAdmin page to include Room Inventory tab alongside Applications tab
+- **TimetableAdmin**: Add conflict detection logic on slot create/edit
+- **AlumniDashboard**: Add "Donations" page to existing alumni pages
+- **AppLayout sidebar**: Add new pages to relevant role sidebars
+- **App.tsx**: Register new page keys for all roles
 
 ### Remove
-Nothing removed; all previous components preserved.
+- Nothing removed; all previous components preserved
 
 ## Implementation Plan
-1. Add GraduationClearance component (student view + admin/HOD management view)
-2. Add ResultEntry component for Lecturers with CA/Exam form and HOD approval view
-3. Deepen StudentPortal with payment history, course history, result slip, graduation tracker
-4. Add TimetableAutomation component with conflict detection and auto-generate
-5. Add AlumniPortal component (registration, directory, job board, fund drive)
-6. Add StaffAppraisal component (self-assessment form, HOD/HR review)
-7. Deepen HostelManagement with room allocation, occupancy report, fee tracking
-8. Add eLearning component (Lecturer upload, student access per course)
-9. Add BiometricAttendance component (simulated check-in, dashboard, alerts)
-10. Upgrade Dashboard with KPI analytics charts (enrollment, pass rates, fee collection, staff ratios)
-11. Wire all new sidebar entries per role
+1. Add `HostelRoomInventory.tsx` - room/bed management, occupancy table, transfer requests, hostel fees per room
+2. Add conflict detection to `TimetableAdmin.tsx` - detect on save, show inline warnings
+3. Add `PaymentHistory.tsx` (student page) - invoice list, paid amounts, receipt print
+4. Add `AlumniDonations.tsx` - fund drives, pledge/donate flow, progress bars
+5. Add admin-side `DonationsAdmin.tsx` or extend AlumniAdmin
+6. Add `StaffTraining.tsx` (HR page) and `TrainingRegistration.tsx` (Lecturer/Staff)
+7. Add `ScoreBulkUpload.tsx` (Lecturer) - CSV template download, upload, validation
+8. Add `StudentComplaints.tsx` (Student) and `ComplaintsAdmin.tsx` (Admin/HOD)
+9. Add `ClearanceLetter.tsx` - institution-branded printable letter for cleared students
+10. Add `StaffDirectory.tsx` (shared, all roles) - searchable, Admin editable
+11. Wire new pages into App.tsx page key types and role dashboards
+12. Add sidebar entries in AppLayout for all new pages per role

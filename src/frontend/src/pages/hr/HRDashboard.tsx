@@ -42,9 +42,11 @@ import {
   saveLocalLeaves,
   saveLocalStaff,
 } from "../../utils/sampleData";
+import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { Appraisals } from "./Appraisals";
 import { Payroll } from "./Payroll";
+import { StaffTraining } from "./StaffTraining";
 
 type Page =
   | "dashboard"
@@ -55,7 +57,9 @@ type Page =
   | "requests"
   | "payroll"
   | "appraisals"
-  | "student-records";
+  | "student-records"
+  | "staff-training"
+  | "staff-directory";
 interface Props {
   activePage: Page;
 }
@@ -810,6 +814,8 @@ export function HRDashboard({ activePage }: Props) {
   if (activePage === "appraisals") return <Appraisals />;
   if (activePage === "student-records")
     return <StudentRecordsList userRole="hr" />;
+  if (activePage === "staff-training") return <StaffTraining />;
+  if (activePage === "staff-directory") return <StaffDirectory />;
 
   return null;
 }

@@ -35,6 +35,7 @@ import {
   gradeFromScore,
 } from "../../utils/sampleData";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
+import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AppraisalSelf } from "./AppraisalSelf";
 import { BiometricAttendance } from "./BiometricAttendance";
@@ -46,6 +47,8 @@ import { LecturerAttendance } from "./LecturerAttendance";
 import { LecturerTimetable } from "./LecturerTimetable";
 import { ResultApprovalLecturer } from "./ResultApprovalLecturer";
 import { ResultEntry } from "./ResultEntry";
+import { ScoreBulkUpload } from "./ScoreBulkUpload";
+import { TrainingRegistration } from "./TrainingRegistration";
 
 type Page =
   | "dashboard"
@@ -66,7 +69,10 @@ type Page =
   | "combined-results"
   | "student-records"
   | "course-materials-lecturer"
-  | "biometric-attendance";
+  | "biometric-attendance"
+  | "score-bulk-upload"
+  | "training-registration"
+  | "staff-directory";
 
 interface Props {
   activePage: Page;
@@ -432,6 +438,9 @@ export function LecturerDashboard({ activePage }: Props) {
     return <StudentRecordsList userRole="lecturer" />;
   if (activePage === "course-materials-lecturer") return <CourseMaterials />;
   if (activePage === "biometric-attendance") return <BiometricAttendance />;
+  if (activePage === "score-bulk-upload") return <ScoreBulkUpload />;
+  if (activePage === "training-registration") return <TrainingRegistration />;
+  if (activePage === "staff-directory") return <StaffDirectory />;
 
   return null;
 }
