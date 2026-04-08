@@ -35,12 +35,16 @@ import { ComplaintsAdmin } from "../admin/ComplaintsAdmin";
 import { DepartmentAnalytics } from "../admin/DepartmentAnalytics";
 import { StudentDisciplinaryRecords } from "../admin/StudentDisciplinaryRecords";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
+import { AnnouncementView } from "../shared/AnnouncementView";
+import { CommunicationCenter } from "../shared/CommunicationCenter";
+import { CourseCatalog } from "../shared/CourseCatalog";
 import { MemoAcknowledgment } from "../shared/MemoAcknowledgment";
 import { PassFailureLists } from "../shared/PassFailureLists";
 import { PromotionResults } from "../shared/PromotionResults";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AppraisalReview } from "./AppraisalReview";
+import { BudgetRequest } from "./BudgetRequest";
 import { DepartmentResults } from "./DepartmentResults";
 import { HODSettings } from "./HODSettings";
 import { ResultEntryReview } from "./ResultEntryReview";
@@ -63,7 +67,11 @@ type Page =
   | "staff-directory"
   | "training-approval-hod"
   | "disciplinary-records"
-  | "memos";
+  | "memos"
+  | "budget-request"
+  | "course-catalog"
+  | "communication-center"
+  | "announcement-view";
 interface Props {
   activePage: Page;
 }
@@ -182,6 +190,11 @@ export function HODDashboard({ activePage }: Props) {
   if (activePage === "disciplinary-records")
     return <StudentDisciplinaryRecords userRole="hod" />;
   if (activePage === "memos") return <MemoAcknowledgment userRole="hod" />;
+  if (activePage === "budget-request") return <BudgetRequest />;
+  if (activePage === "course-catalog") return <CourseCatalog />;
+  if (activePage === "communication-center") return <CommunicationCenter />;
+  if (activePage === "announcement-view")
+    return <AnnouncementView role={"lecturer" as never} />;
 
   if (activePage === "hod-students")
     return (

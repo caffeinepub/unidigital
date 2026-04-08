@@ -16,6 +16,7 @@ import { BursaryDashboard } from "./pages/bursary/BursaryDashboard";
 import { HODDashboard } from "./pages/hod/HODDashboard";
 import { HRDashboard } from "./pages/hr/HRDashboard";
 import { LecturerDashboard } from "./pages/lecturer/LecturerDashboard";
+import { ParentDashboard } from "./pages/parent/ParentDashboard";
 import { StudentDashboard } from "./pages/student/StudentDashboard";
 import { initSampleData, initV6, initV9, initV19 } from "./utils/sampleData";
 
@@ -107,73 +108,90 @@ export default function App() {
 
   const role = userProfile?.role ?? "admin";
 
+  type AdminPage =
+    | "dashboard"
+    | "students"
+    | "courses"
+    | "staff"
+    | "admissions"
+    | "memos"
+    | "reports"
+    | "registration-admin"
+    | "timetable-admin"
+    | "attendance-admin"
+    | "documents-admin"
+    | "hostel-admin"
+    | "library-admin"
+    | "academic-calendar"
+    | "exam-schedule-admin"
+    | "announcements-admin"
+    | "grade-config"
+    | "result-approval-admin"
+    | "result-publication"
+    | "academic-status"
+    | "graduation-clearance"
+    | "analytics-v2"
+    | "data-import"
+    | "ai-dashboard"
+    | "progression-admin"
+    | "appraisal-admin"
+    | "alumni-admin"
+    | "documents-scans-admin"
+    | "combination-courses"
+    | "score-audit-log"
+    | "result-sheet-admin"
+    | "transcript-management"
+    | "dept-analytics"
+    | "faculty-results"
+    | "senate-presentation"
+    | "student-records"
+    | "pass-fail-lists"
+    | "hostel-room-inventory"
+    | "donations-admin"
+    | "complaints-admin"
+    | "clearance-letter"
+    | "staff-directory"
+    | "document-verification"
+    | "disciplinary-records"
+    | "senate-minutes"
+    | "internal-memos"
+    | "data-export"
+    | "hostel-allocation"
+    | "hostel-transfers"
+    | "timetable-conflicts"
+    | "cbt-analytics"
+    | "cbt-resit"
+    | "registration-management"
+    | "manual-registration"
+    | "bulk-registration"
+    | "ai-scan-registration"
+    | "ai-bulk-registration"
+    | "registration-doc-archive"
+    | "settings"
+    | "promotion-results"
+    | "analytics-dashboard"
+    | "jamb-portal"
+    | "fee-management"
+    | "academic-calendar-admin"
+    | "course-management"
+    | "examination-management"
+    | "staff-management"
+    | "budget-management"
+    | "scholarship-management"
+    | "notice-board"
+    | "transfer-management"
+    | "deferment-management"
+    | "result-verification"
+    | "advanced-analytics"
+    | "system-admin"
+    | "course-catalog"
+    | "announcement-view"
+    | "communication-center-admin";
+
   const renderContent = () => {
     switch (role) {
       case "admin":
-        return (
-          <AdminDashboard
-            activePage={
-              activePage as
-                | "dashboard"
-                | "students"
-                | "courses"
-                | "staff"
-                | "admissions"
-                | "memos"
-                | "reports"
-                | "registration-admin"
-                | "timetable-admin"
-                | "attendance-admin"
-                | "documents-admin"
-                | "hostel-admin"
-                | "library-admin"
-                | "academic-calendar"
-                | "exam-schedule-admin"
-                | "announcements-admin"
-                | "grade-config"
-                | "result-approval-admin"
-                | "result-publication"
-                | "academic-status"
-                | "graduation-clearance"
-                | "analytics-v2"
-                | "data-import"
-                | "ai-dashboard"
-                | "progression-admin"
-                | "appraisal-admin"
-                | "alumni-admin"
-                | "documents-scans-admin"
-                | "combination-courses"
-                | "score-audit-log"
-                | "result-sheet-admin"
-                | "transcript-management"
-                | "dept-analytics"
-                | "faculty-results"
-                | "senate-presentation"
-                | "student-records"
-                | "pass-fail-lists"
-                | "hostel-room-inventory"
-                | "donations-admin"
-                | "complaints-admin"
-                | "clearance-letter"
-                | "staff-directory"
-                | "analytics-dashboard"
-                | "hostel-room-inventory"
-                | "donations-admin"
-                | "complaints-admin"
-                | "clearance-letter"
-                | "document-verification"
-                | "disciplinary-records"
-                | "senate-minutes"
-                | "internal-memos"
-                | "data-export"
-                | "hostel-allocation"
-                | "hostel-transfers"
-                | "timetable-conflicts"
-                | "cbt-analytics"
-                | "cbt-resit"
-            }
-          />
-        );
+        return <AdminDashboard activePage={activePage as AdminPage} />;
       case "student":
         return (
           <StudentDashboard
@@ -209,6 +227,16 @@ export default function App() {
                 | "complaints"
                 | "clearance-letter-student"
                 | "disciplinary-record"
+                | "reg-status"
+                | "fee-payment"
+                | "fee-clearance"
+                | "transcript-request"
+                | "scholarship-application"
+                | "department-transfer"
+                | "deferment"
+                | "course-catalog"
+                | "announcements-view"
+                | "communication-center"
             }
             userEmail={userProfile?.email ?? ""}
             userName={userProfile?.name ?? ""}
@@ -240,6 +268,9 @@ export default function App() {
                 | "training-registration"
                 | "training-application"
                 | "staff-directory"
+                | "course-catalog"
+                | "announcement-view"
+                | "communication-center"
             }
           />
         );
@@ -260,6 +291,8 @@ export default function App() {
                 | "installment-plans"
                 | "fee-waivers"
                 | "bursary-reconciliation"
+                | "fee-structure"
+                | "communication-center"
             }
           />
         );
@@ -281,6 +314,8 @@ export default function App() {
                 | "training-approval-hr"
                 | "staff-directory"
                 | "memos"
+                | "staff-onboarding"
+                | "communication-center"
             }
           />
         );
@@ -304,71 +339,19 @@ export default function App() {
                 | "training-approval-hod"
                 | "disciplinary-records"
                 | "memos"
+                | "budget-request"
+                | "course-catalog"
+                | "communication-center"
+                | "announcement-view"
             }
           />
         );
       case "alumni":
         return <AlumniDashboard activePage={activePage as AlumniPage} />;
+      case "parent":
+        return <ParentDashboard />;
       default:
-        return (
-          <AdminDashboard
-            activePage={
-              activePage as
-                | "dashboard"
-                | "students"
-                | "courses"
-                | "staff"
-                | "admissions"
-                | "memos"
-                | "reports"
-                | "registration-admin"
-                | "timetable-admin"
-                | "attendance-admin"
-                | "documents-admin"
-                | "hostel-admin"
-                | "library-admin"
-                | "academic-calendar"
-                | "exam-schedule-admin"
-                | "announcements-admin"
-                | "grade-config"
-                | "result-approval-admin"
-                | "result-publication"
-                | "academic-status"
-                | "graduation-clearance"
-                | "analytics-v2"
-                | "data-import"
-                | "ai-dashboard"
-                | "progression-admin"
-                | "appraisal-admin"
-                | "alumni-admin"
-                | "documents-scans-admin"
-                | "combination-courses"
-                | "score-audit-log"
-                | "result-sheet-admin"
-                | "transcript-management"
-                | "dept-analytics"
-                | "faculty-results"
-                | "senate-presentation"
-                | "student-records"
-                | "pass-fail-lists"
-                | "hostel-room-inventory"
-                | "donations-admin"
-                | "complaints-admin"
-                | "clearance-letter"
-                | "staff-directory"
-                | "document-verification"
-                | "disciplinary-records"
-                | "senate-minutes"
-                | "internal-memos"
-                | "data-export"
-                | "hostel-allocation"
-                | "hostel-transfers"
-                | "timetable-conflicts"
-                | "cbt-analytics"
-                | "cbt-resit"
-            }
-          />
-        );
+        return <AdminDashboard activePage={activePage as AdminPage} />;
     }
   };
 

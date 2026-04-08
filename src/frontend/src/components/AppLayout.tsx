@@ -272,6 +272,111 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Download size={18} />,
       key: "data-export",
     },
+    {
+      label: "Reg. Management",
+      icon: <ClipboardCheck size={18} />,
+      key: "registration-management",
+    },
+    {
+      label: "Manual Registration",
+      icon: <Users size={18} />,
+      key: "manual-registration",
+    },
+    {
+      label: "Bulk Registration",
+      icon: <FileSpreadsheet size={18} />,
+      key: "bulk-registration",
+    },
+    {
+      label: "AI Scan Registration",
+      icon: <ScanLine size={18} />,
+      key: "ai-scan-registration",
+    },
+    {
+      label: "AI Bulk Upload",
+      icon: <Sparkles size={18} />,
+      key: "ai-bulk-registration",
+    },
+    {
+      label: "Reg. Doc Archive",
+      icon: <Database size={18} />,
+      key: "registration-doc-archive",
+    },
+    {
+      label: "JAMB Portal",
+      icon: <GraduationCap size={18} />,
+      key: "jamb-portal",
+    },
+    {
+      label: "Fee Management",
+      icon: <DollarSign size={18} />,
+      key: "fee-management",
+    },
+    {
+      label: "Course Management",
+      icon: <BookOpen size={18} />,
+      key: "course-management",
+    },
+    {
+      label: "Exam Management",
+      icon: <ClipboardCheck size={18} />,
+      key: "examination-management",
+    },
+    {
+      label: "Staff Management",
+      icon: <Users size={18} />,
+      key: "staff-management",
+    },
+    {
+      label: "Budget Management",
+      icon: <Wallet size={18} />,
+      key: "budget-management",
+    },
+    {
+      label: "Scholarships",
+      icon: <Award size={18} />,
+      key: "scholarship-management",
+    },
+    {
+      label: "Notice Board",
+      icon: <Bell size={18} />,
+      key: "notice-board",
+    },
+    {
+      label: "Transfer Requests",
+      icon: <RefreshCw size={18} />,
+      key: "transfer-management",
+    },
+    {
+      label: "Deferment Cases",
+      icon: <Calendar size={18} />,
+      key: "deferment-management",
+    },
+    {
+      label: "Result Verification",
+      icon: <ClipboardCheck size={18} />,
+      key: "result-verification",
+    },
+    {
+      label: "Advanced Analytics",
+      icon: <BarChart3 size={18} />,
+      key: "advanced-analytics",
+    },
+    {
+      label: "System Admin",
+      icon: <Settings size={18} />,
+      key: "system-admin",
+    },
+    {
+      label: "Course Catalog",
+      icon: <BookMarked size={18} />,
+      key: "course-catalog",
+    },
+    {
+      label: "Communication",
+      icon: <MessageSquare size={18} />,
+      key: "communication-center-admin",
+    },
   ],
   student: [
     {
@@ -374,6 +479,56 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Shield size={18} />,
       key: "disciplinary-record",
     },
+    {
+      label: "Registration Status",
+      icon: <ClipboardCheck size={18} />,
+      key: "reg-status",
+    },
+    {
+      label: "Pay Fees",
+      icon: <DollarSign size={18} />,
+      key: "fee-payment",
+    },
+    {
+      label: "Fee Clearance",
+      icon: <ClipboardCheck size={18} />,
+      key: "fee-clearance",
+    },
+    {
+      label: "Request Transcript",
+      icon: <FileText size={18} />,
+      key: "transcript-request",
+    },
+    {
+      label: "Apply for Scholarship",
+      icon: <Award size={18} />,
+      key: "scholarship-application",
+    },
+    {
+      label: "Department Transfer",
+      icon: <RefreshCw size={18} />,
+      key: "department-transfer",
+    },
+    {
+      label: "Deferment",
+      icon: <Calendar size={18} />,
+      key: "deferment",
+    },
+    {
+      label: "Course Catalog",
+      icon: <BookMarked size={18} />,
+      key: "course-catalog",
+    },
+    {
+      label: "Announcements",
+      icon: <Megaphone size={18} />,
+      key: "announcements-view",
+    },
+    {
+      label: "Messages",
+      icon: <MessageSquare size={18} />,
+      key: "communication-center",
+    },
   ],
   lecturer: [
     {
@@ -450,6 +605,21 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Users size={18} />,
       key: "staff-directory",
     },
+    {
+      label: "Course Catalog",
+      icon: <BookMarked size={18} />,
+      key: "course-catalog",
+    },
+    {
+      label: "Announcements",
+      icon: <Megaphone size={18} />,
+      key: "announcement-view",
+    },
+    {
+      label: "Messages",
+      icon: <MessageSquare size={18} />,
+      key: "communication-center",
+    },
   ],
   bursary: [
     {
@@ -492,6 +662,16 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <TrendingUp size={18} />,
       key: "bursary-reconciliation",
     },
+    {
+      label: "Fee Structure",
+      icon: <FileText size={18} />,
+      key: "fee-structure",
+    },
+    {
+      label: "Messages",
+      icon: <MessageSquare size={18} />,
+      key: "communication-center",
+    },
   ],
   hr: [
     {
@@ -530,6 +710,16 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Memos",
       icon: <Mail size={18} />,
       key: "memos",
+    },
+    {
+      label: "Staff Onboarding",
+      icon: <UserCheck size={18} />,
+      key: "staff-onboarding",
+    },
+    {
+      label: "Messages",
+      icon: <MessageSquare size={18} />,
+      key: "communication-center",
     },
   ],
   hod: [
@@ -609,6 +799,26 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Mail size={18} />,
       key: "memos",
     },
+    {
+      label: "Budget Request",
+      icon: <Wallet size={18} />,
+      key: "budget-request",
+    },
+    {
+      label: "Course Catalog",
+      icon: <BookMarked size={18} />,
+      key: "course-catalog",
+    },
+    {
+      label: "Messages",
+      icon: <MessageSquare size={18} />,
+      key: "communication-center",
+    },
+    {
+      label: "Announcements",
+      icon: <Megaphone size={18} />,
+      key: "announcement-view",
+    },
   ],
   alumni: [
     {
@@ -620,6 +830,20 @@ const navByRole: Record<string, NavItem[]> = {
     { label: "Job Board", icon: <Briefcase size={18} />, key: "jobs" },
     { label: "Events", icon: <Calendar size={18} />, key: "events" },
     { label: "My Profile", icon: <Settings size={18} />, key: "profile" },
+  ],
+  parent: [
+    {
+      label: "Dashboard",
+      icon: <LayoutDashboard size={18} />,
+      key: "dashboard",
+    },
+    { label: "My Ward", icon: <GraduationCap size={18} />, key: "ward" },
+    { label: "Link Ward", icon: <UserCheck size={18} />, key: "link-ward" },
+    {
+      label: "Announcements",
+      icon: <Megaphone size={18} />,
+      key: "announcements",
+    },
   ],
 };
 
@@ -689,6 +913,7 @@ export function AppLayout({
     hr: "HR Officer",
     hod: "Head of Department",
     alumni: "Alumni",
+    parent: "Parent / Guardian",
   };
 
   const SidebarContent = (

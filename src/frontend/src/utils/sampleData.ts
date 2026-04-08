@@ -1076,6 +1076,8 @@ export interface AcademicCalendarEvent {
   endDate?: string;
   type: "Holiday" | "Exam" | "Lecture" | "Deadline" | "Semester";
   description?: string;
+  session?: string;
+  published?: boolean;
 }
 
 export interface ExamEntry {

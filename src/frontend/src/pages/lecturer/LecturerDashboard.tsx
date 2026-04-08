@@ -35,6 +35,9 @@ import {
   gradeFromScore,
 } from "../../utils/sampleData";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
+import { AnnouncementView } from "../shared/AnnouncementView";
+import { CommunicationCenter } from "../shared/CommunicationCenter";
+import { CourseCatalog } from "../shared/CourseCatalog";
 import { MemoAcknowledgment } from "../shared/MemoAcknowledgment";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
@@ -75,7 +78,10 @@ type Page =
   | "score-bulk-upload"
   | "training-registration"
   | "training-application"
-  | "staff-directory";
+  | "staff-directory"
+  | "course-catalog"
+  | "announcement-view"
+  | "communication-center";
 
 interface Props {
   activePage: Page;
@@ -420,6 +426,10 @@ export function LecturerDashboard({ activePage }: Props) {
   if (activePage === "training-registration") return <TrainingRegistration />;
   if (activePage === "training-application") return <TrainingApplicationForm />;
   if (activePage === "staff-directory") return <StaffDirectory />;
+  if (activePage === "course-catalog") return <CourseCatalog />;
+  if (activePage === "announcement-view")
+    return <AnnouncementView role={"lecturer" as never} />;
+  if (activePage === "communication-center") return <CommunicationCenter />;
 
   return null;
 }

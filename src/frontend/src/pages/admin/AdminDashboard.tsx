@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
+import { initJambStudents } from "../../utils/jambData";
 import {
   type AdmissionApplication,
   type CourseRecord,
@@ -54,32 +55,45 @@ import {
   saveLocalStudents,
 } from "../../utils/sampleData";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
+import { AnnouncementView } from "../shared/AnnouncementView";
+import { CommunicationCenter } from "../shared/CommunicationCenter";
+import { CourseCatalog } from "../shared/CourseCatalog";
 import { PassFailureLists } from "../shared/PassFailureLists";
 import { PromotionResults } from "../shared/PromotionResults";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
+import { AIBulkUploadRegistration } from "./AIBulkUploadRegistration";
 import { AIDashboard } from "./AIDashboard";
+import { AISmartScanRegistration } from "./AISmartScanRegistration";
+import { AcademicCalendarAdmin } from "./AcademicCalendarAdmin";
 import { AcademicStatus } from "./AcademicStatus";
+import { AdvancedAnalytics } from "./AdvancedAnalytics";
 import { AlumniAdmin } from "./AlumniAdmin";
 import { AnalyticsDashboard } from "./AnalyticsDashboard";
 import { AnalyticsV2 } from "./AnalyticsV2";
 import { AnnouncementsAdmin } from "./AnnouncementsAdmin";
 import { AppraisalAdmin } from "./AppraisalAdmin";
 import { AttendanceAdmin } from "./AttendanceAdmin";
+import { BudgetManagement } from "./BudgetManagement";
+import { BulkRegistration } from "./BulkRegistration";
 import { CBTAnalytics } from "./CBTAnalytics";
 import { CBTResitManager } from "./CBTResitManager";
 import { ClearanceLetter } from "./ClearanceLetter";
 import { CombinationCourses } from "./CombinationCourses";
 import { ComplaintsAdmin } from "./ComplaintsAdmin";
+import { CourseManagement } from "./CourseManagement";
 import { DataExportCenter } from "./DataExportCenter";
 import { DataImport } from "./DataImport";
+import { DefermentManagement } from "./DefermentManagement";
 import { DepartmentAnalytics } from "./DepartmentAnalytics";
 import { DocumentAdmin } from "./DocumentAdmin";
 import { DocumentVerificationPortal } from "./DocumentVerificationPortal";
 import { DocumentsScansAdmin } from "./DocumentsScansAdmin";
 import { DonationsAdmin } from "./DonationsAdmin";
 import { ExamScheduleAdmin } from "./ExamScheduleAdmin";
+import { ExaminationManagement } from "./ExaminationManagement";
 import { FacultyResults } from "./FacultyResults";
+import { FeeManagement } from "./FeeManagement";
 import { GradeConfig } from "./GradeConfig";
 import { GraduationClearance } from "./GraduationClearance";
 import { HostelAdmin } from "./HostelAdmin";
@@ -88,19 +102,29 @@ import { HostelRoomInventory } from "./HostelRoomInventory";
 import { HostelTransferRequests } from "./HostelTransferRequests";
 import { InstitutionSettings } from "./InstitutionSettings";
 import { InternalMemoSystem } from "./InternalMemoSystem";
+import { JAMBAdmissionPortal } from "./JAMBAdmissionPortal";
 import { LibraryAdmin } from "./LibraryAdmin";
+import { ManualRegistration } from "./ManualRegistration";
+import { NoticeBoard } from "./NoticeBoard";
 import { ProgressionAdmin } from "./ProgressionAdmin";
 import { RegistrationAdmin } from "./RegistrationAdmin";
+import { RegistrationDocumentArchive } from "./RegistrationDocumentArchive";
+import { RegistrationManagementAdmin } from "./RegistrationManagementAdmin";
 import { ResultApprovalAdmin } from "./ResultApprovalAdmin";
 import { ResultPublication } from "./ResultPublication";
 import { ResultSheetAdmin } from "./ResultSheetAdmin";
+import { ResultVerificationAdmin } from "./ResultVerificationAdmin";
+import { ScholarshipManagement } from "./ScholarshipManagement";
 import { ScoreAuditLog } from "./ScoreAuditLog";
 import { SenateMeetingMinutes } from "./SenateMeetingMinutes";
 import { SenatePresentation } from "./SenatePresentation";
+import { StaffManagement } from "./StaffManagement";
 import { StudentDisciplinaryRecords } from "./StudentDisciplinaryRecords";
+import { SystemAdmin } from "./SystemAdmin";
 import { TimetableAdmin } from "./TimetableAdmin";
 import { TimetableConflictManager } from "./TimetableConflictManager";
 import { TranscriptAdmin } from "./TranscriptAdmin";
+import { TransferManagement } from "./TransferManagement";
 
 type Page =
   | "dashboard"
@@ -157,7 +181,30 @@ type Page =
   | "hostel-transfers"
   | "timetable-conflicts"
   | "cbt-analytics"
-  | "cbt-resit";
+  | "cbt-resit"
+  | "registration-management"
+  | "manual-registration"
+  | "bulk-registration"
+  | "ai-scan-registration"
+  | "ai-bulk-registration"
+  | "registration-doc-archive"
+  | "jamb-portal"
+  | "fee-management"
+  | "academic-calendar-admin"
+  | "course-management"
+  | "examination-management"
+  | "staff-management"
+  | "budget-management"
+  | "scholarship-management"
+  | "notice-board"
+  | "transfer-management"
+  | "deferment-management"
+  | "result-verification"
+  | "advanced-analytics"
+  | "system-admin"
+  | "course-catalog"
+  | "announcement-view"
+  | "communication-center-admin";
 
 interface AdminDashboardProps {
   activePage: Page;
@@ -229,6 +276,7 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: activePage is intentional refresh trigger
   useEffect(() => {
+    initJambStudents();
     setStudents(getLocalStudents());
     setCourses(getLocalCourses());
     setStaff(getLocalStaff());
@@ -1309,7 +1357,6 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "appraisal-admin") return <AppraisalAdmin />;
   if (activePage === "alumni-admin") return <AlumniAdmin />;
   if (activePage === "documents-scans-admin") return <DocumentsScansAdmin />;
-
   if (activePage === "combination-courses") return <CombinationCourses />;
   if (activePage === "score-audit-log") return <ScoreAuditLog />;
   if (activePage === "result-sheet-admin") return <ResultSheetAdmin />;
@@ -1342,5 +1389,34 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "timetable-conflicts") return <TimetableConflictManager />;
   if (activePage === "cbt-analytics") return <CBTAnalytics />;
   if (activePage === "cbt-resit") return <CBTResitManager />;
+  if (activePage === "registration-management")
+    return <RegistrationManagementAdmin />;
+  if (activePage === "manual-registration") return <ManualRegistration />;
+  if (activePage === "bulk-registration") return <BulkRegistration />;
+  if (activePage === "ai-scan-registration") return <AISmartScanRegistration />;
+  if (activePage === "ai-bulk-registration")
+    return <AIBulkUploadRegistration />;
+  if (activePage === "registration-doc-archive")
+    return <RegistrationDocumentArchive />;
+  if (activePage === "jamb-portal") return <JAMBAdmissionPortal />;
+  // New v22 modules
+  if (activePage === "fee-management") return <FeeManagement />;
+  if (activePage === "academic-calendar-admin")
+    return <AcademicCalendarAdmin />;
+  if (activePage === "course-management") return <CourseManagement />;
+  if (activePage === "examination-management") return <ExaminationManagement />;
+  if (activePage === "staff-management") return <StaffManagement />;
+  if (activePage === "budget-management") return <BudgetManagement />;
+  if (activePage === "scholarship-management") return <ScholarshipManagement />;
+  if (activePage === "notice-board") return <NoticeBoard />;
+  if (activePage === "transfer-management") return <TransferManagement />;
+  if (activePage === "deferment-management") return <DefermentManagement />;
+  if (activePage === "result-verification") return <ResultVerificationAdmin />;
+  if (activePage === "advanced-analytics") return <AdvancedAnalytics />;
+  if (activePage === "system-admin") return <SystemAdmin />;
+  if (activePage === "course-catalog") return <CourseCatalog />;
+  if (activePage === "announcement-view") return <AnnouncementView />;
+  if (activePage === "communication-center-admin")
+    return <CommunicationCenter />;
   return null;
 }

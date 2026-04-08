@@ -42,6 +42,11 @@ const roles = [
     label: "Alumni",
     desc: "Access alumni network, job board & events",
   },
+  {
+    key: "parent",
+    label: "Parent / Guardian",
+    desc: "Monitor your ward's academic progress",
+  },
 ];
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {

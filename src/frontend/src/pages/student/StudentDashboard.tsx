@@ -20,6 +20,9 @@ import {
   getLocalStudents,
 } from "../../utils/sampleData";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
+import { AnnouncementView } from "../shared/AnnouncementView";
+import { CommunicationCenter } from "../shared/CommunicationCenter";
+import { CourseCatalog } from "../shared/CourseCatalog";
 import { AcademicProgression } from "./AcademicProgression";
 import { AcademicStatusStudent } from "./AcademicStatusStudent";
 import { AcademicTranscript } from "./AcademicTranscript";
@@ -28,21 +31,28 @@ import { ClearanceLetterStudent } from "./ClearanceLetterStudent";
 import { CourseHistory } from "./CourseHistory";
 import { StudentCourseMaterials } from "./CourseMaterials";
 import { CourseRegistration } from "./CourseRegistration";
+import { Deferment } from "./Deferment";
+import { DepartmentTransfer } from "./DepartmentTransfer";
 import { DisciplinaryRecordStudent } from "./DisciplinaryRecordStudent";
 import { DocumentRequests } from "./DocumentRequests";
 import { ExamSchedule } from "./ExamSchedule";
+import { FeeClearance } from "./FeeClearance";
+import { FeePayment } from "./FeePayment";
 import { GPASummary } from "./GPASummary";
 import { GraduationStatus } from "./GraduationStatus";
 import { HostelApplication } from "./HostelApplication";
 import { PaymentHistory } from "./PaymentHistory";
 import { ResultSlip } from "./ResultSlip";
+import { ScholarshipApplication } from "./ScholarshipApplication";
 import { StudentAcademicRecord } from "./StudentAcademicRecord";
 import { StudentAssignments } from "./StudentAssignments";
 import { StudentAttendance } from "./StudentAttendance";
 import { StudentComplaints } from "./StudentComplaints";
 import { StudentFees } from "./StudentFees";
 import { StudentLibrary } from "./StudentLibrary";
+import { StudentRegistrationStatus } from "./StudentRegistrationStatus";
 import { StudentTimetable } from "./StudentTimetable";
+import { TranscriptRequest } from "./TranscriptRequest";
 
 type Page =
   | "dashboard"
@@ -74,7 +84,17 @@ type Page =
   | "payment-history"
   | "complaints"
   | "clearance-letter-student"
-  | "disciplinary-record";
+  | "disciplinary-record"
+  | "reg-status"
+  | "fee-payment"
+  | "fee-clearance"
+  | "transcript-request"
+  | "scholarship-application"
+  | "department-transfer"
+  | "deferment"
+  | "course-catalog"
+  | "announcements-view"
+  | "communication-center";
 
 interface StudentDashboardProps {
   activePage: Page;
@@ -595,7 +615,6 @@ export function StudentDashboard({
     return <AcademicProgression userEmail={userEmail} />;
   if (activePage === "academic-transcript")
     return <AcademicTranscript userEmail={userEmail} userName={userName} />;
-
   if (activePage === "academic-record")
     return <StudentAcademicRecord userEmail={userEmail} userName={userName} />;
   if (activePage === "course-materials")
@@ -604,11 +623,27 @@ export function StudentDashboard({
     return <CourseHistory userEmail={userEmail} />;
   if (activePage === "payment-history")
     return <PaymentHistory userName={userName} />;
-
   if (activePage === "complaints") return <StudentComplaints />;
   if (activePage === "clearance-letter-student")
     return <ClearanceLetterStudent studentName={userName} />;
   if (activePage === "disciplinary-record")
     return <DisciplinaryRecordStudent userEmail={userEmail} />;
+  if (activePage === "reg-status")
+    return <StudentRegistrationStatus studentMatric={studentId} />;
+  // New v22 modules
+  if (activePage === "fee-payment") return <FeePayment />;
+  if (activePage === "fee-clearance") return <FeeClearance />;
+  if (activePage === "transcript-request")
+    return <TranscriptRequest userEmail={userEmail} userName={userName} />;
+  if (activePage === "scholarship-application")
+    return <ScholarshipApplication />;
+  if (activePage === "department-transfer")
+    return <DepartmentTransfer userEmail={userEmail} userName={userName} />;
+  if (activePage === "deferment")
+    return <Deferment userEmail={userEmail} userName={userName} />;
+  if (activePage === "course-catalog") return <CourseCatalog />;
+  if (activePage === "announcements-view")
+    return <AnnouncementView role={"student" as never} />;
+  if (activePage === "communication-center") return <CommunicationCenter />;
   return null;
 }
