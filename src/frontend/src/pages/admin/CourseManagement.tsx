@@ -77,6 +77,8 @@ const DEPARTMENTS = [
   "Entrepreneurship Education",
   "Health Education",
   "Human Kinetics Education",
+  "Environmental Education",
+  "Integrated Science",
 ];
 
 const LEVELS = ["100", "200", "300", "400", "500", "600"];

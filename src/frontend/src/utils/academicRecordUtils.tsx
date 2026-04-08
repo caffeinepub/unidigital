@@ -155,6 +155,716 @@ const CHE_COURSES = {
   ],
 };
 
+// B.Sc (Ed) Chemistry — FUEK official course structure (100–400 Level)
+const CHM_COURSES = {
+  level100: [
+    {
+      prefix: "GST",
+      code: "111",
+      title: "Communication in English",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "113",
+      title: "Use of Library and Study Skills",
+      credit: "2C",
+    },
+    {
+      prefix: "EDU",
+      code: "101",
+      title: "Introduction to Teaching and Foundations of Education",
+      credit: "2C",
+    },
+    { prefix: "BIO", code: "101", title: "General Biology I", credit: "2C" },
+    {
+      prefix: "BIO",
+      code: "107",
+      title: "General Biology Practical I",
+      credit: "1C",
+    },
+    { prefix: "CHM", code: "101", title: "General Chemistry I", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "107",
+      title: "General Chemistry Practical I",
+      credit: "1C",
+    },
+    {
+      prefix: "MTH",
+      code: "101",
+      title: "General Mathematics I",
+      credit: "2C",
+    },
+    {
+      prefix: "COS",
+      code: "101",
+      title: "Introduction to Computer Science",
+      credit: "3C",
+    },
+    { prefix: "PHY", code: "101", title: "General Physics I", credit: "2C" },
+    {
+      prefix: "PHY",
+      code: "107",
+      title: "General Physics Practical I",
+      credit: "1C",
+    },
+    {
+      prefix: "GST",
+      code: "112",
+      title: "Nigerian Peoples and Culture",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "114",
+      title: "Communication in Either Arabic or French",
+      credit: "1C",
+    },
+    {
+      prefix: "BIO",
+      code: "108",
+      title: "General Biology Practical II",
+      credit: "1C",
+    },
+    { prefix: "BIO", code: "102", title: "General Biology II", credit: "2C" },
+    { prefix: "PHY", code: "102", title: "General Physics II", credit: "2C" },
+    { prefix: "CHM", code: "102", title: "General Chemistry II", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "108",
+      title: "General Chemistry Practical II",
+      credit: "1C",
+    },
+    {
+      prefix: "SED",
+      code: "102",
+      title: "Foundations of Science",
+      credit: "2C",
+    },
+    {
+      prefix: "MTH",
+      code: "102",
+      title: "General Mathematics II",
+      credit: "2C",
+    },
+    { prefix: "COS", code: "102", title: "Problem Solving", credit: "3C" },
+  ],
+  level200: [
+    {
+      prefix: "ENT",
+      code: "211",
+      title: "Entrepreneurship and Innovation",
+      credit: "2C",
+    },
+    {
+      prefix: "EDU",
+      code: "201",
+      title: "Curriculum, Curriculum Delivery and Teaching Methods",
+      credit: "2C",
+    },
+    {
+      prefix: "EDU",
+      code: "203",
+      title: "Educational Technology and Artificial Intelligence",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "207",
+      title: "General Chemistry Practical III",
+      credit: "1C",
+    },
+    { prefix: "CHM", code: "211", title: "Organic Chemistry I", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "213",
+      title: "Analytical Chemistry I",
+      credit: "2C",
+    },
+    { prefix: "PHY", code: "205", title: "Thermal Physics", credit: "2C" },
+    { prefix: "BIO", code: "201", title: "Genetics I", credit: "2C" },
+    {
+      prefix: "COS",
+      code: "201",
+      title: "Computer Programming I",
+      credit: "3C",
+    },
+    {
+      prefix: "GST",
+      code: "212",
+      title: "Philosophy Logic and Human Existence",
+      credit: "2C",
+    },
+    {
+      prefix: "EDU",
+      code: "202",
+      title: "Micro Teaching Theory and Practice",
+      credit: "2C",
+    },
+    {
+      prefix: "STA",
+      code: "202",
+      title: "Statistics for Physical Sciences and Engineering",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "208",
+      title: "General Chemistry Practical IV",
+      credit: "1C",
+    },
+    { prefix: "CHM", code: "210", title: "Physical Chemistry I", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "212",
+      title: "Inorganic Chemistry I",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "214",
+      title: "Structure and Bonding",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "202",
+      title: "Introduction to Chemistry Method",
+      credit: "2C",
+    },
+    { prefix: "BIO", code: "206", title: "Hydrobiology", credit: "2C" },
+    {
+      prefix: "COS",
+      code: "202",
+      title: "Computer Programming II",
+      credit: "3C",
+    },
+  ],
+  level300: [
+    { prefix: "EDU", code: "301", title: "Teaching Practice I", credit: "3C" },
+    {
+      prefix: "EDU",
+      code: "303",
+      title: "Educational Administration and Planning",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "301",
+      title: "Physical Chemistry II",
+      credit: "2C",
+    },
+    { prefix: "CHM", code: "303", title: "Organic Chemistry II", credit: "2C" },
+    { prefix: "CHM", code: "305", title: "Petroleum Chemistry", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "319",
+      title: "Environmental Chemistry",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "399",
+      title: "Industrial Attachment II (12 Weeks)",
+      credit: "3C",
+    },
+    {
+      prefix: "SED",
+      code: "301",
+      title: "Research Methodology and Data Analysis",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "303",
+      title: "Entrepreneurship in Chemistry Education",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "312",
+      title: "Peace and Conflict Resolution",
+      credit: "2C",
+    },
+    { prefix: "ENT", code: "312", title: "Venture Creation", credit: "2C" },
+    {
+      prefix: "EDU",
+      code: "302",
+      title: "Educational Measurements Tests Research Methods and Statistics",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "302",
+      title: "Inorganic Chemistry II",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "304",
+      title: "Atomic and Molecular Structure and Symmetry",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "312",
+      title: "Analytical Atomic Spectroscopy",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "314",
+      title: "Entrepreneurship Skill in Chemistry",
+      credit: "2C",
+    },
+    { prefix: "CHM", code: "316", title: "Applied Spectroscopy", credit: "2C" },
+    { prefix: "SED", code: "302", title: "Chemistry Methods II", credit: "2C" },
+  ],
+  level400: [
+    { prefix: "EDU", code: "401", title: "Teaching Practice II", credit: "3C" },
+    {
+      prefix: "CHM",
+      code: "409",
+      title: "Chemistry Practical V",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "423",
+      title: "Organometallic Chemistry",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "425",
+      title: "Advanced Organic Reaction Mechanism",
+      credit: "3C",
+    },
+    { prefix: "CHM", code: "427", title: "Polymer Chemistry II", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "429",
+      title: "Chemistry of Industrial Raw Material",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "401",
+      title: "Seminar in Chemistry and Chemistry Education",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "403",
+      title: "Primary and Integrated Science Programme",
+      credit: "2C",
+    },
+    { prefix: "EDU", code: "400", title: "Project", credit: "3C" },
+    {
+      prefix: "EDU",
+      code: "402",
+      title: "Guidance and Counseling",
+      credit: "2C",
+    },
+    { prefix: "CHM", code: "406", title: "Reaction Kinetics", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "410",
+      title: "Analytical Chemistry II",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "422",
+      title: "Inorganic Reaction Mechanism",
+      credit: "3C",
+    },
+    {
+      prefix: "CHM",
+      code: "424",
+      title: "Co-ordination Chemistry",
+      credit: "2C",
+    },
+    {
+      prefix: "CHM",
+      code: "426",
+      title: "Natural Product Chemistry",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "402",
+      title: "Organization and Management of Chemistry Laboratory",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "404",
+      title: "Science Technology and Society",
+      credit: "2C",
+    },
+  ],
+};
+
+// B.Sc (Ed) Integrated Science — FUEK official course structure (100–400 Level)
+const EIS_COURSES = {
+  level100: [
+    {
+      prefix: "GST",
+      code: "111",
+      title: "Communication in English",
+      credit: "2C",
+    },
+    {
+      prefix: "EDU",
+      code: "101",
+      title: "Introduction to Teaching and Foundations of Education",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "113",
+      title: "Use of Library and Study Skills",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "101",
+      title: "Introduction to Science and Integrated Science Education",
+      credit: "2C",
+    },
+    { prefix: "BIO", code: "101", title: "General Biology I", credit: "2C" },
+    {
+      prefix: "BIO",
+      code: "107",
+      title: "General Biology Practical I",
+      credit: "1C",
+    },
+    {
+      prefix: "CSC",
+      code: "101",
+      title: "Introduction to Computer Science",
+      credit: "3C",
+    },
+    {
+      prefix: "CHM",
+      code: "101",
+      title: "General Chemistry I (Inorganic)",
+      credit: "2C",
+    },
+    {
+      prefix: "MTH",
+      code: "101",
+      title: "General Mathematics I",
+      credit: "2C",
+    },
+    { prefix: "PHY", code: "101", title: "General Mechanics I", credit: "2C" },
+    {
+      prefix: "PHY",
+      code: "103",
+      title: "General Physics III (Behaviour of Matter)",
+      credit: "2C",
+    },
+    {
+      prefix: "GEY",
+      code: "101",
+      title: "Introduction to Geology I",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "112",
+      title: "Nigerian Peoples and Culture",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "114",
+      title: "Communication in Arabic or French",
+      credit: "1C",
+    },
+    { prefix: "BIO", code: "102", title: "General Biology II", credit: "2C" },
+    {
+      prefix: "BIO",
+      code: "108",
+      title: "General Biology Practical II",
+      credit: "1C",
+    },
+    {
+      prefix: "CHM",
+      code: "102",
+      title: "General Chemistry II (Organic Chemistry)",
+      credit: "2C",
+    },
+    {
+      prefix: "PHY",
+      code: "102",
+      title: "General Physics II (Electricity and Magnetism)",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "102",
+      title: "Integrated Science Practical I",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "104",
+      title: "Matter (Metals and Non-Metals)",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "102",
+      title: "Foundation of Science",
+      credit: "2C",
+    },
+  ],
+  level200: [
+    {
+      prefix: "ENT",
+      code: "211",
+      title: "Entrepreneurship and Innovation",
+      credit: "2C",
+    },
+    {
+      prefix: "EDU",
+      code: "201",
+      title: "Curriculum, Curriculum Delivery and General Teaching Methods",
+      credit: "2C",
+    },
+    {
+      prefix: "EDU",
+      code: "203",
+      title: "Educational Technology and Artificial Intelligence",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "235",
+      title: "Special Methods in Teaching Integrated Science I",
+      credit: "2C",
+    },
+    { prefix: "BIO", code: "201", title: "Genetics I", credit: "2C" },
+    { prefix: "BIO", code: "203", title: "General Physiology", credit: "2C" },
+    {
+      prefix: "CHM",
+      code: "213",
+      title: "Analytical Chemistry I",
+      credit: "2C",
+    },
+    { prefix: "BCH", code: "201", title: "General Biochemistry", credit: "2C" },
+    { prefix: "MCB", code: "221", title: "General Microbiology", credit: "2C" },
+    { prefix: "EIS", code: "205", title: "Origin of Life", credit: "2C" },
+    {
+      prefix: "EDU",
+      code: "202",
+      title: "Micro Teaching Theory and Practice",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "212",
+      title: "Philosophy Logic and Human Existence",
+      credit: "2C",
+    },
+    { prefix: "BIO", code: "202", title: "Introductory Ecology", credit: "2C" },
+    {
+      prefix: "BIO",
+      code: "204",
+      title: "Biological Techniques",
+      credit: "2C",
+    },
+    { prefix: "BIO", code: "206", title: "Hydrobiology", credit: "2C" },
+    {
+      prefix: "EIS",
+      code: "202",
+      title: "Man and the Environment",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "204",
+      title: "Study Skills and Communication in Science",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "208",
+      title: "Integrated Science Practical II",
+      credit: "2C",
+    },
+  ],
+  level300: [
+    { prefix: "EDU", code: "301", title: "Teaching Practice I", credit: "3C" },
+    {
+      prefix: "EDU",
+      code: "303",
+      title: "Educational Administration and Planning",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "335",
+      title: "Special Methods in Teaching Integrated Science II",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "311",
+      title: "Entrepreneurship in Integrated Science",
+      credit: "2C",
+    },
+    { prefix: "BIO", code: "301", title: "Genetics II", credit: "2C" },
+    {
+      prefix: "BIO",
+      code: "303",
+      title: "Biogeography and Soil Biology",
+      credit: "2C",
+    },
+    {
+      prefix: "ICH",
+      code: "317",
+      title: "Industrial Raw Materials Resource Inventory",
+      credit: "1C",
+    },
+    {
+      prefix: "CHM",
+      code: "319",
+      title: "Environmental Chemistry",
+      credit: "2C",
+    },
+    { prefix: "EIS", code: "303", title: "Carbon Compounds", credit: "2C" },
+    {
+      prefix: "SED",
+      code: "305",
+      title: "Computer Application in Science Education",
+      credit: "2C",
+    },
+    {
+      prefix: "SED",
+      code: "301",
+      title: "Research Methods and Data Analysis",
+      credit: "2C",
+    },
+    {
+      prefix: "GST",
+      code: "312",
+      title: "Peace and Conflict Resolution",
+      credit: "2C",
+    },
+    { prefix: "ENT", code: "312", title: "Venture Creation", credit: "2C" },
+    {
+      prefix: "EDU",
+      code: "302",
+      title: "Educational Measurements Tests Research Methods and Statistics",
+      credit: "3C",
+    },
+    {
+      prefix: "BIO",
+      code: "302",
+      title: "Population Biology and Evolution",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "302",
+      title: "Fields and Mechanical Waves",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "304",
+      title: "Electrochemical Science",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "306",
+      title: "Integrated Science Laboratory Organization and Management",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "308",
+      title: "Integrated Science Practical III",
+      credit: "2C",
+    },
+  ],
+  level400: [
+    { prefix: "EDU", code: "401", title: "Teaching Practice II", credit: "3C" },
+    {
+      prefix: "EIS",
+      code: "401",
+      title: "Teaching for Basic Science Core-Curriculum",
+      credit: "3C",
+    },
+    {
+      prefix: "EIS",
+      code: "411",
+      title: "Science in Everyday Life",
+      credit: "3C",
+    },
+    {
+      prefix: "EIS",
+      code: "413",
+      title: "Nature and Continuity in Life",
+      credit: "3C",
+    },
+    {
+      prefix: "SED",
+      code: "401",
+      title: "Seminar in Science and Science Education",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "415",
+      title: "Waves Technology and Health",
+      credit: "2C",
+    },
+    { prefix: "EDU", code: "400", title: "Project", credit: "3C" },
+    {
+      prefix: "EDU",
+      code: "402",
+      title: "Guidance and Counselling",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "402",
+      title: "Integrated Science Programmes",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "404",
+      title: "Geoscience and Lunar Exploration",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "406",
+      title: "Environmental Science",
+      credit: "2C",
+    },
+    {
+      prefix: "EIS",
+      code: "412",
+      title: "Science Society and Technology",
+      credit: "3C",
+    },
+    {
+      prefix: "EIS",
+      code: "414",
+      title: "Integrated Science Workshop",
+      credit: "2C",
+    },
+  ],
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Level label helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -247,10 +957,13 @@ type CourseEntry = {
   title?: string;
 };
 
-function levelKey(levelIndex: number): "level100" | "level200" | "level300" {
+function levelKey(
+  levelIndex: number,
+): "level100" | "level200" | "level300" | "level400" {
   if (levelIndex === 0) return "level100";
   if (levelIndex === 1) return "level200";
-  return "level300";
+  if (levelIndex === 2) return "level300";
+  return "level400";
 }
 
 export function getCoursesForLevel(
@@ -259,15 +972,19 @@ export function getCoursesForLevel(
   levelIndex: number,
   subCombination?: string,
 ): CourseEntry[] {
-  const lk = levelKey(levelIndex);
-
   if (
     institutionType === "college_of_education" ||
     institutionType === "College of Education"
   ) {
     const courses: CourseEntry[] = [];
+    const lk3: "level100" | "level200" | "level300" =
+      levelIndex === 0
+        ? "level100"
+        : levelIndex === 1
+          ? "level200"
+          : "level300";
     // Always include EDU courses
-    const eduLevel = EDU_COURSES[lk] ?? [];
+    const eduLevel = EDU_COURSES[lk3] ?? [];
     for (const c of eduLevel) {
       courses.push({
         prefix: c.prefix,
@@ -292,6 +1009,12 @@ export function getCoursesForLevel(
       const parts = subCombination.split("/");
       for (const part of parts) {
         const subj = part.trim().toUpperCase();
+        const lk3: "level100" | "level200" | "level300" =
+          levelIndex === 0
+            ? "level100"
+            : levelIndex === 1
+              ? "level200"
+              : "level300";
         const map: Record<
           string,
           Record<
@@ -304,7 +1027,7 @@ export function getCoursesForLevel(
           PHY: PHY_COURSES,
           CHE: CHE_COURSES,
         };
-        const subCourses = map[subj]?.[lk] ?? [];
+        const subCourses = map[subj]?.[lk3] ?? [];
         for (const c of subCourses) {
           courses.push({
             prefix: c.prefix,
@@ -340,7 +1063,27 @@ export function getCoursesForLevel(
     return levelCodes.map((c) => ({ prefix, code: c, credit: "3C" }));
   }
 
-  // University – generic course codes
+  // University – generic course codes, with FUEK BSc-Ed department overrides
+  if (department === "Chemistry") {
+    const lk4 = levelKey(levelIndex);
+    const courses = CHM_COURSES[lk4] ?? CHM_COURSES.level100;
+    return courses.map((c) => ({
+      prefix: c.prefix,
+      code: c.code,
+      credit: c.credit,
+      title: c.title,
+    }));
+  }
+  if (department === "Integrated Science") {
+    const lk4 = levelKey(levelIndex);
+    const courses = EIS_COURSES[lk4] ?? EIS_COURSES.level100;
+    return courses.map((c) => ({
+      prefix: c.prefix,
+      code: c.code,
+      credit: c.credit,
+      title: c.title,
+    }));
+  }
   const deptMap: Record<string, string> = {
     "Computer Science": "CSC",
     Engineering: "ENG",

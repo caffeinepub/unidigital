@@ -51,6 +51,7 @@ const FACULTIES: Record<string, string[]> = {
     "Mathematics",
     "Biology",
     "Science",
+    "Integrated",
   ],
   "Faculty of Engineering": [
     "Engineering",

@@ -28,8 +28,10 @@ import {
   type FuekCourse,
   REGISTRATION_RULES,
   getBIOCourses,
+  getCHMCourses,
   getCSCCourses,
   getCompulsoryCourses,
+  getEISCourses,
   getElectiveCourses,
   getGSTCourses,
   getTotalCreditUnits,
@@ -201,7 +203,7 @@ export function CourseRegistration({
   );
 
   // Compulsory courses for this programme/level/semester
-  // For BSc-Ed CSC and BIO departments, use the official FUEK course lists
+  // For BSc-Ed departments, use the official FUEK course lists
   const compulsoryCourses = useMemo(() => {
     const dept = student.department;
     const lvl = student.level as number;
@@ -211,6 +213,12 @@ export function CourseRegistration({
     }
     if (dept === "Biology") {
       return getBIOCourses(lvl, sem).filter((c) => c.type === "compulsory");
+    }
+    if (dept === "Chemistry") {
+      return getCHMCourses(lvl, sem).filter((c) => c.type === "compulsory");
+    }
+    if (dept === "Integrated Science") {
+      return getEISCourses(lvl, sem).filter((c) => c.type === "compulsory");
     }
     return getCompulsoryCourses(student.programmeType, lvl, sem);
   }, [student.department, student.programmeType, student.level]);
@@ -225,6 +233,12 @@ export function CourseRegistration({
     }
     if (dept === "Biology") {
       return getBIOCourses(lvl, sem).filter((c) => c.type === "elective");
+    }
+    if (dept === "Chemistry") {
+      return getCHMCourses(lvl, sem).filter((c) => c.type === "elective");
+    }
+    if (dept === "Integrated Science") {
+      return getEISCourses(lvl, sem).filter((c) => c.type === "elective");
     }
     return getElectiveCourses(student.programmeType, lvl, sem);
   }, [student.department, student.programmeType, student.level]);
