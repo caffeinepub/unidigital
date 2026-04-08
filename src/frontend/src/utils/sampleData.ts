@@ -1953,6 +1953,17 @@ function initV9Data() {
       weightA: 50,
       weightB: 50,
     },
+    {
+      id: "COMB-003",
+      combinationCode: "NCE-BIO+CSC",
+      title: "Biology + Computer Science",
+      componentA: "NCE-BIO201",
+      componentB: "NCE-CSC201",
+      programme: "NCE",
+      level: "2",
+      weightA: 50,
+      weightB: 50,
+    },
   ];
   saveLocalCombinedCourses(combinedCourses);
 
@@ -1961,6 +1972,34 @@ function initV9Data() {
 
 export function initV9() {
   initV9Data();
+}
+
+// ========================
+// Handwriting Score Sheet Scanner types
+// ========================
+export interface HandwrittenScoreEntry {
+  id: string;
+  courseCode: string;
+  studentMatric: string;
+  studentName: string;
+  caScore: number;
+  examScore: number;
+  totalScore: number;
+  grade: string;
+  remarks: string;
+  confidence: number; // AI extraction confidence 0-100
+  scanStatus: "pending" | "extracted" | "verified" | "error";
+  rawImageBlobId?: string;
+  extractedAt?: string;
+}
+
+export function getLocalHandwrittenEntries(): HandwrittenScoreEntry[] {
+  return JSON.parse(
+    localStorage.getItem("unidigital_handwritten_entries") || "[]",
+  );
+}
+export function saveLocalHandwrittenEntries(data: HandwrittenScoreEntry[]) {
+  localStorage.setItem("unidigital_handwritten_entries", JSON.stringify(data));
 }
 
 // ========================

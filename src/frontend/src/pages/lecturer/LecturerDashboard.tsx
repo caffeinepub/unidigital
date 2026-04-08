@@ -44,9 +44,11 @@ import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AppraisalSelf } from "./AppraisalSelf";
 import { BiometricAttendance } from "./BiometricAttendance";
 import { CAEntry } from "./CAEntry";
+import { CombinationScoreSheet } from "./CombinationScoreSheet";
 import { CombinedResults } from "./CombinedResults";
 import { CourseMaterials } from "./CourseMaterials";
 import { ExamScheduleLecturer } from "./ExamScheduleLecturer";
+import { HandwritingScoreScanner } from "./HandwritingScoreScanner";
 import { LecturerAttendance } from "./LecturerAttendance";
 import { LecturerTimetable } from "./LecturerTimetable";
 import { ResultApprovalLecturer } from "./ResultApprovalLecturer";
@@ -76,6 +78,8 @@ type Page =
   | "course-materials-lecturer"
   | "biometric-attendance"
   | "score-bulk-upload"
+  | "combination-score-sheet"
+  | "handwriting-scanner"
   | "training-registration"
   | "training-application"
   | "staff-directory"
@@ -424,6 +428,9 @@ export function LecturerDashboard({ activePage }: Props) {
   if (activePage === "course-materials-lecturer") return <CourseMaterials />;
   if (activePage === "biometric-attendance") return <BiometricAttendance />;
   if (activePage === "score-bulk-upload") return <ScoreBulkUpload />;
+  if (activePage === "combination-score-sheet")
+    return <CombinationScoreSheet />;
+  if (activePage === "handwriting-scanner") return <HandwritingScoreScanner />;
   if (activePage === "training-registration") return <TrainingRegistration />;
   if (activePage === "training-application") return <TrainingApplicationForm />;
   if (activePage === "staff-directory") return <StaffDirectory />;

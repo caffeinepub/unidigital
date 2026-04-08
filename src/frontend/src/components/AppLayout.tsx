@@ -188,6 +188,11 @@ const navByRole: Record<string, NavItem[]> = {
       key: "score-audit-log",
     },
     {
+      label: "Score Sheet Results",
+      icon: <FileSpreadsheet size={18} />,
+      key: "score-sheet-results",
+    },
+    {
       label: "Result Sheet",
       icon: <FileSpreadsheet size={18} />,
       key: "result-sheet-admin",
@@ -647,6 +652,16 @@ const navByRole: Record<string, NavItem[]> = {
       key: "score-bulk-upload",
     },
     {
+      label: "Combination Sheets",
+      icon: <GitMerge size={18} />,
+      key: "combination-score-sheet",
+    },
+    {
+      label: "Handwriting Scanner",
+      icon: <ScanLine size={18} />,
+      key: "handwriting-scanner",
+    },
+    {
       label: "Training Application",
       icon: <BookMarked size={18} />,
       key: "training-application",
@@ -858,6 +873,11 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Result Review",
       icon: <ClipboardCheck size={18} />,
       key: "result-entry-review",
+    },
+    {
+      label: "Score Sheet Results",
+      icon: <FileSpreadsheet size={18} />,
+      key: "score-sheet-results",
     },
     {
       label: "Appraisal Review",

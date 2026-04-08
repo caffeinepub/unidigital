@@ -35,6 +35,7 @@ import {
 import { CertificateCourses } from "../admin/CertificateCourses";
 import { ComplaintsAdmin } from "../admin/ComplaintsAdmin";
 import { DepartmentAnalytics } from "../admin/DepartmentAnalytics";
+import { ScoreSheetResults } from "../admin/ScoreSheetResults";
 import { StudentDisciplinaryRecords } from "../admin/StudentDisciplinaryRecords";
 import { AcademicCalendar } from "../shared/AcademicCalendar";
 import { AnnouncementView } from "../shared/AnnouncementView";
@@ -65,6 +66,7 @@ type Page =
   | "promotion-results"
   | "pass-fail-lists"
   | "result-entry-review"
+  | "score-sheet-results"
   | "appraisal-review"
   | "complaints-hod"
   | "staff-directory"
@@ -188,6 +190,7 @@ export function HODDashboard({ activePage }: Props) {
     );
 
   if (activePage === "result-entry-review") return <ResultEntryReview />;
+  if (activePage === "score-sheet-results") return <ScoreSheetResults />;
   if (activePage === "appraisal-review") return <AppraisalReview />;
   if (activePage === "complaints-hod") return <ComplaintsAdmin />;
   if (activePage === "staff-directory") return <StaffDirectory />;

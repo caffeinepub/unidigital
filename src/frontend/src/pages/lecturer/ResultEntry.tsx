@@ -2,8 +2,11 @@ import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
 import {
   AlertTriangle,
   Download,
+  FileText,
   Info,
   Paperclip,
+  Printer,
+  Save,
   Send,
   Upload,
 } from "lucide-react";
@@ -33,14 +36,42 @@ import {
   useResultProcessing,
 } from "../../contexts/ResultProcessingContext";
 import { getInstitutionSettings } from "../../hooks/useInstitutionSettings";
-import { downloadCSV, parseCSV } from "../../utils/csvUtils";
+import { parseCSV } from "../../utils/csvUtils";
 import {
   type ExamResult,
   addScoreAuditLog,
   getLocalCourses,
   getLocalStudents,
 } from "../../utils/sampleData";
+import {
+  type ScoreSheetStudent,
+  computeGrade,
+  downloadBlankTemplate,
+  downloadFilledScoreSheet,
+  gradeColorClass,
+  printScoreSheet,
+} from "../../utils/scoreSheetUtils";
 import { useFileUpload } from "../../utils/useFileUpload";
+
+const SEMESTERS = [
+  "2023/2024 First",
+  "2023/2024 Second",
+  "2022/2023 First",
+  "2022/2023 Second",
+  "2024/2025 First",
+  "2024/2025 Second",
+];
+
+interface SigState {
+  lecturerName: string;
+  hodName: string;
+  deanName: string;
+  moderatorName: string;
+  lecturerDate: string;
+  hodDate: string;
+  deanDate: string;
+  moderatorDate: string;
+}
 
 export function ResultEntry() {
   const { caScores, examResults, setExamResults, gradeConfig } =
@@ -51,40 +82,53 @@ export function ResultEntry() {
   const [semester, setSemester] = useState("2023/2024 First");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [attachedDocs, setAttachedDocs] = useState<Record<string, number>>({});
+  const [showSig, setShowSig] = useState(false);
+  const [sig, setSigState] = useState<SigState>({
+    lecturerName: "",
+    hodName: "",
+    deanName: "",
+    moderatorName: "",
+    lecturerDate: "",
+    hodDate: "",
+    deanDate: "",
+    moderatorDate: "",
+  });
+
   const { actor } = useActor(createActor);
   const { identity } = useInternetIdentity();
   const { uploadFile } = useFileUpload();
   const uploadRef = useRef<HTMLInputElement>(null);
-
   const settings = getInstitutionSettings();
-
   const course = courses.find((c) => c.code === selectedCourse);
 
-  // Load existing results from backend on course/semester change
   useEffect(() => {
     if (!actor || !selectedCourse) return;
-    (actor as any)
+    (
+      actor as unknown as {
+        listResultsByCourse: (c: string) => Promise<unknown[]>;
+      }
+    )
       .listResultsByCourse(selectedCourse)
-      .then((backendResults: any[]) => {
-        if (backendResults.length === 0) return;
-        const converted: ExamResult[] = backendResults
+      .then((res) => {
+        if (!Array.isArray(res) || res.length === 0) return;
+        const converted: ExamResult[] = (res as Array<Record<string, unknown>>)
           .filter((br) => br.semester === semester)
           .map((br) => ({
-            id: br.id,
-            courseCode: br.courseCode,
-            studentMatric: br.studentMatric,
+            id: String(br.id),
+            courseCode: String(br.courseCode),
+            studentMatric: String(br.studentMatric),
             examScore: Number(br.examScore),
             totalScore: Number(br.totalScore),
-            grade: br.grade,
+            grade: String(br.grade),
             point: Number(br.gradePoints),
-            remark: br.remark,
-            semester: br.semester,
-            session: br.session,
-            status: br.status as ExamResult["status"],
+            remark: String(br.remark),
+            semester: String(br.semester),
+            session: String(br.session),
+            status: String(br.status) as ExamResult["status"],
           }));
         setExamResults(converted);
       })
-      .catch(() => {}); // silently fallback to local
+      .catch(() => {});
   }, [actor, selectedCourse, semester, setExamResults]);
 
   const getCA = (matric: string) =>
@@ -115,14 +159,9 @@ export function ResultEntry() {
       totalScore: total,
       grade: gradeEntry.grade,
       point: gradeEntry.point,
-      remark:
-        gradeEntry.remark === "Pass"
-          ? "Pass"
-          : total < 40
-            ? "Carryover"
-            : "Fail",
+      remark: gradeEntry.remark === "Pass" ? "Pass" : "Fail",
       semester,
-      session: "2023/2024",
+      session: semester.split(" ")[0] ?? "2023/2024",
       status: existing?.status ?? "draft",
     };
     const rest = examResults.filter(
@@ -149,7 +188,6 @@ export function ResultEntry() {
         : r,
     );
     setExamResults(updatedLocal);
-
     if (actor) {
       try {
         const draftResults = examResults.filter(
@@ -158,15 +196,20 @@ export function ResultEntry() {
             r.semester === semester &&
             r.status === "draft",
         );
-        const courseData = course;
         await Promise.all(
           draftResults.map(async (r) => {
             const ca = getCA(r.studentMatric);
-            const id = await (actor as any).createExamResult({
+            const id = await (
+              actor as unknown as {
+                createExamResult: (
+                  d: Record<string, unknown>,
+                ) => Promise<string>;
+              }
+            ).createExamResult({
               id: r.id,
               courseCode: r.courseCode,
-              courseTitle: courseData?.title ?? r.courseCode,
-              creditUnits: BigInt(courseData?.creditUnits ?? 3),
+              courseTitle: course?.title ?? r.courseCode,
+              creditUnits: BigInt(course?.creditUnits ?? 3),
               studentMatric: r.studentMatric,
               examScore: BigInt(r.examScore),
               caScore: BigInt(ca),
@@ -182,35 +225,34 @@ export function ResultEntry() {
               createdAt: BigInt(Date.now()),
               updatedAt: BigInt(Date.now()),
             });
-            await (actor as any).submitResultForApproval(id);
+            await (
+              actor as unknown as {
+                submitResultForApproval: (id: string) => Promise<void>;
+              }
+            ).submitResultForApproval(id);
           }),
         );
       } catch (err) {
         console.error("Backend submit failed:", err);
       }
     }
-
     toast.success("Results submitted for HOD approval");
   };
 
-  // ---- Download Template ----
   const handleDownloadTemplate = () => {
-    if (!selectedCourse) return;
-    const headers = [
-      "Matric Number",
-      "Student Name",
-      "CA Score (/30)",
-      "Exam Score (/70)",
-      "Total",
-      "Grade",
-      "Notes",
-    ];
-    const rows = students.map((s) => {
-      const ca = getCA(s.matricNumber);
-      return [s.matricNumber, s.name, String(ca), "", "", "", ""];
-    });
-    const filename = `score-template-${selectedCourse}-${semester.replace(/ /g, "-")}.csv`;
-    downloadCSV(filename, [headers, ...rows]);
+    if (!selectedCourse || !course) return;
+    downloadBlankTemplate(
+      {
+        faculty: "Faculty of Education",
+        department: course.department,
+        courseTitle: course.title,
+        courseCode: course.code,
+        semester,
+        session: semester.split(" ")[0] ?? "2023/2024",
+      },
+      students.map((s) => ({ name: s.name, matricNumber: s.matricNumber })),
+      sig,
+    );
     addScoreAuditLog({
       id: `AUDIT-${Date.now()}`,
       action: "download_template",
@@ -220,10 +262,76 @@ export function ResultEntry() {
       recordCount: students.length,
       timestamp: new Date().toISOString(),
     });
-    toast.success(`Template downloaded for ${students.length} students.`);
+    toast.success(`Blank template downloaded for ${students.length} students.`);
   };
 
-  // ---- Upload Score Sheet ----
+  const handleDownloadFilled = () => {
+    if (!selectedCourse || !course) return;
+    const rows: ScoreSheetStudent[] = students.map((s, i) => {
+      const result = getResult(s.matricNumber);
+      const ca = getCA(s.matricNumber);
+      const exam = result?.examScore ?? 0;
+      const total = ca + exam;
+      const { grade, remarks } = computeGrade(total);
+      return {
+        sn: i + 1,
+        name: s.name,
+        matricNumber: s.matricNumber,
+        ca,
+        exam,
+        total,
+        grade: result ? result.grade : grade,
+        remarks: result ? result.remark : remarks,
+      };
+    });
+    downloadFilledScoreSheet(
+      {
+        faculty: "Faculty of Education",
+        department: course.department,
+        courseTitle: course.title,
+        courseCode: course.code,
+        semester,
+        session: semester.split(" ")[0] ?? "2023/2024",
+      },
+      rows,
+      sig,
+    );
+    toast.success("Filled score sheet downloaded.");
+  };
+
+  const handlePrint = () => {
+    if (!selectedCourse || !course) return;
+    const rows: ScoreSheetStudent[] = students.map((s, i) => {
+      const result = getResult(s.matricNumber);
+      const ca = getCA(s.matricNumber);
+      const exam = result?.examScore ?? 0;
+      const total = ca + exam;
+      const { grade, remarks } = computeGrade(total);
+      return {
+        sn: i + 1,
+        name: s.name,
+        matricNumber: s.matricNumber,
+        ca: result ? ca : "–",
+        exam: result ? exam : "–",
+        total: result ? total : "–",
+        grade: result ? result.grade : grade,
+        remarks: result ? result.remark : remarks,
+      };
+    });
+    printScoreSheet(
+      {
+        faculty: "Faculty of Education",
+        department: course.department,
+        courseTitle: course.title,
+        courseCode: course.code,
+        semester,
+        session: semester.split(" ")[0] ?? "2023/2024",
+      },
+      rows,
+      sig,
+    );
+  };
+
   const handleUploadCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedCourse) return;
@@ -231,15 +339,21 @@ export function ResultEntry() {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       const rows = parseCSV(text);
-      const dataRows = rows.slice(1);
+      const dataStart = rows.findIndex(
+        (r) =>
+          r[0]?.trim().toLowerCase() === "s/n" ||
+          r[2]?.trim().toLowerCase() === "matric number",
+      );
+      const dataRows =
+        dataStart >= 0 ? rows.slice(dataStart + 1) : rows.slice(1);
       let imported = 0;
       for (const row of dataRows) {
-        const matric = row[0]?.trim();
-        const examScoreStr = row[3]?.trim();
-        if (!matric || !examScoreStr) continue;
-        const examScore = Number.parseFloat(examScoreStr);
-        if (Number.isNaN(examScore)) continue;
-        updateExamScore(matric, Math.min(70, Math.max(0, examScore)));
+        const matric = row[2]?.trim();
+        const examStr = row[4]?.trim();
+        if (!matric || !examStr) continue;
+        const exam = Number(examStr);
+        if (Number.isNaN(exam)) continue;
+        updateExamScore(matric, Math.min(60, Math.max(0, exam)));
         imported++;
       }
       addScoreAuditLog({
@@ -268,7 +382,11 @@ export function ResultEntry() {
     try {
       const blobId = await uploadFile(file);
       const principal = identity?.getPrincipal().toString() ?? "anonymous";
-      await (actor as any).createDocumentRecord({
+      await (
+        actor as unknown as {
+          createDocumentRecord: (d: Record<string, unknown>) => Promise<void>;
+        }
+      ).createDocumentRecord({
         id: `DOC-EXAM-${Date.now()}`,
         title: `Exam Script – ${selectedCourse} (${semester})`,
         documentType: "exam-result",
@@ -290,11 +408,11 @@ export function ResultEntry() {
   };
 
   const attachedCount = attachedDocs[`${selectedCourse}-${semester}`] ?? 0;
-
-  const missing = students.filter(
-    (s) =>
-      !getResult(s.matricNumber) ||
-      getResult(s.matricNumber)?.examScore === undefined,
+  const hasDraft = examResults.some(
+    (r) =>
+      r.courseCode === selectedCourse &&
+      r.semester === semester &&
+      r.status === "draft",
   );
   const courseResults = selectedCourse
     ? students.map((s) => ({
@@ -303,51 +421,51 @@ export function ResultEntry() {
         ca: getCA(s.matricNumber),
       }))
     : [];
-
-  const gradeColors: Record<string, string> = {
-    A: "bg-green-100 text-green-700",
-    B: "bg-blue-100 text-blue-700",
-    C: "bg-amber-100 text-amber-700",
-    D: "bg-orange-100 text-orange-700",
-    E: "bg-red-200 text-red-700",
-    F: "bg-red-100 text-red-800",
-  };
-
-  const hasDraft = examResults.some(
-    (r) =>
-      r.courseCode === selectedCourse &&
-      r.semester === semester &&
-      r.status === "draft",
+  const missing = courseResults.filter(
+    (cr) => !cr.result || cr.result.examScore === undefined,
   );
+
+  const setSigField = (key: keyof SigState, value: string) =>
+    setSigState((prev) => ({ ...prev, [key]: value }));
+
+  const sigFields: [keyof SigState, string][] = [
+    ["lecturerName", "Lecturer Name"],
+    ["hodName", "HOD Name"],
+    ["deanName", "Dean Name"],
+    ["moderatorName", "Moderator Name"],
+    ["lecturerDate", "Lecturer Date"],
+    ["hodDate", "HOD Date"],
+    ["deanDate", "Dean Date"],
+    ["moderatorDate", "Moderator Date"],
+  ];
 
   return (
     <div className="space-y-6">
-      {/* System-level result entry disabled banner */}
       {!settings.toggles.resultEntryEnabled && (
         <div
-          className="flex items-start gap-3 bg-yellow-50 border border-yellow-300 rounded-lg p-4 text-yellow-800"
+          className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-lg p-4 text-amber-800"
           data-ocid="results.info_banner"
         >
-          <Info size={18} className="mt-0.5 flex-shrink-0 text-yellow-600" />
+          <Info size={18} className="mt-0.5 flex-shrink-0 text-amber-600" />
           <div>
             <p className="font-semibold text-sm">Result Entry Disabled</p>
             <p className="text-sm mt-0.5">
               Result entry is currently disabled by the system administrator.
-              Please contact the Academic Office for assistance.
             </p>
           </div>
         </div>
       )}
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Result Entry</h1>
+        <h1 className="text-2xl font-bold text-slate-800">Score Sheet Entry</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Enter exam scores. CA is auto-filled from CA Entry.
+          Enter CA (max 40) and Exam (max 60) scores — Total, Grade and Remarks
+          auto-calculate.
         </p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-64">
+        <div className="w-72">
           <Label>Course</Label>
           <Select value={selectedCourse} onValueChange={setSelectedCourse}>
             <SelectTrigger className="mt-1" data-ocid="results.select">
@@ -369,12 +487,7 @@ export function ResultEntry() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[
-                "2023/2024 First",
-                "2023/2024 Second",
-                "2022/2023 First",
-                "2022/2023 Second",
-              ].map((s) => (
+              {SEMESTERS.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
                 </SelectItem>
@@ -382,63 +495,111 @@ export function ResultEntry() {
             </SelectContent>
           </Select>
         </div>
-        {selectedCourse && (
+      </div>
+
+      {selectedCourse && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={handleDownloadTemplate}
+            data-ocid="results.download_template_button"
+          >
+            <Download size={15} className="mr-1.5" /> Blank Template
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDownloadFilled}
+            data-ocid="results.download_filled_button"
+          >
+            <FileText size={15} className="mr-1.5" /> Download Score Sheet
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            data-ocid="results.print_button"
+          >
+            <Printer size={15} className="mr-1.5" /> Print Score Sheet
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowSig((v) => !v)}
+            data-ocid="results.signatures_button"
+          >
+            <FileText size={15} className="mr-1.5" />{" "}
+            {showSig ? "Hide" : "Edit"} Signatures
+          </Button>
           <>
+            <input
+              ref={uploadRef}
+              type="file"
+              accept=".csv,.xlsx"
+              className="hidden"
+              onChange={handleUploadCSV}
+            />
             <Button
               variant="outline"
-              onClick={handleDownloadTemplate}
-              data-ocid="results.secondary_button"
+              onClick={() => uploadRef.current?.click()}
+              data-ocid="results.upload_button"
             >
-              <Download size={16} className="mr-2" /> Download Template
-            </Button>
-            <>
-              <input
-                ref={uploadRef}
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleUploadCSV}
-              />
-              <Button
-                variant="outline"
-                onClick={() => uploadRef.current?.click()}
-                data-ocid="results.upload_button"
-              >
-                <Upload size={16} className="mr-2" /> Upload Score Sheet
-              </Button>
-            </>
-            {hasDraft && (
-              <Button
-                onClick={submitForApproval}
-                className="bg-blue-600 hover:bg-blue-700"
-                data-ocid="results.submit_button"
-              >
-                <Send size={16} className="mr-2" /> Submit for Approval
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => setScannerOpen(true)}
-              data-ocid="results.primary_button"
-            >
-              <Paperclip size={16} className="mr-2" />
-              Attach Script
-              {attachedCount > 0 && (
-                <Badge className="ml-2 bg-amber-100 text-amber-700 border-0">
-                  {attachedCount}
-                </Badge>
-              )}
+              <Upload size={15} className="mr-1.5" /> Upload Score Sheet
             </Button>
           </>
-        )}
-      </div>
+          {hasDraft && (
+            <Button
+              onClick={submitForApproval}
+              className="bg-blue-600 hover:bg-blue-700"
+              data-ocid="results.submit_button"
+            >
+              <Send size={15} className="mr-1.5" /> Submit to HOD
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => setScannerOpen(true)}
+            data-ocid="results.primary_button"
+          >
+            <Paperclip size={15} className="mr-1.5" />
+            Attach Script
+            {attachedCount > 0 && (
+              <Badge className="ml-2 bg-amber-100 text-amber-700 border-0">
+                {attachedCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {showSig && selectedCourse && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">
+              Signature Block (for download/print)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {sigFields.map(([key, lbl]) => (
+                <div key={key}>
+                  <Label className="text-xs">{lbl}</Label>
+                  <Input
+                    className="mt-1 h-8 text-xs"
+                    value={sig[key]}
+                    onChange={(e) => setSigField(key, e.target.value)}
+                    placeholder={lbl}
+                  />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedCourse && missing.length > 0 && (
         <div
           className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg"
           data-ocid="results.error_state"
         >
-          <AlertTriangle size={16} className="text-amber-600" />
+          <AlertTriangle size={16} className="text-amber-600 flex-shrink-0" />
           <p className="text-sm text-amber-700">
             {missing.length} student(s) have no exam score yet.
           </p>
@@ -449,26 +610,52 @@ export function ResultEntry() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {course?.title} – Result Sheet
+              {course?.code} – {course?.title}
+              <span className="ml-3 text-xs font-normal text-slate-500">
+                {semester}
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
+            <div className="px-4 pt-3 pb-2 bg-slate-50 border-b text-center">
+              <p className="font-bold text-sm uppercase">
+                {settings.profile.name ||
+                  "Federal University of Education Kontagora"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {[
+                  settings.profile.address,
+                  settings.profile.city,
+                  settings.profile.state,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "P.M.B. 1039, Kontagora, Niger State"}
+              </p>
+              <p className="text-xs mt-0.5">
+                <span className="font-semibold">Dept:</span>{" "}
+                {course?.department} &bull;{" "}
+                <span className="font-semibold ml-2">Session:</span>{" "}
+                {semester.split(" ")[0]}
+              </p>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[750px]">
-                <thead className="bg-slate-50 border-b">
+              <table className="w-full min-w-[820px]">
+                <thead className="bg-slate-800 text-white">
                   <tr>
                     {[
-                      "Matric",
-                      "Name",
-                      "CA (/30)",
-                      "Exam Score (/70)",
-                      "Total (/100)",
+                      "S/N",
+                      "Student Name",
+                      "Matric Number",
+                      "CA (40)",
+                      "Exam (60)",
+                      "Total (100)",
                       "Grade",
-                      "Remark",
+                      "Remarks",
+                      "Status",
                     ].map((h) => (
                       <th
                         key={h}
-                        className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase"
+                        className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide"
                       >
                         {h}
                       </th>
@@ -476,74 +663,129 @@ export function ResultEntry() {
                   </tr>
                 </thead>
                 <tbody>
-                  {courseResults.map(({ student: s, result, ca }, i) => (
-                    <tr
-                      key={s.matricNumber}
-                      className="border-b last:border-0 hover:bg-slate-50"
-                      data-ocid={`results.item.${i + 1}`}
-                    >
-                      <td className="px-4 py-3 text-xs font-mono text-blue-600">
-                        {s.matricNumber}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium">
-                        {s.name}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-slate-600">
-                        {ca}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={70}
-                          className="w-20 h-8 text-sm"
-                          value={result?.examScore ?? ""}
-                          onChange={(e) =>
-                            updateExamScore(
-                              s.matricNumber,
-                              Math.min(70, Math.max(0, +e.target.value)),
-                            )
-                          }
-                          disabled={
-                            !settings.toggles.resultEntryEnabled ||
-                            (result?.status !== "draft" &&
-                              result?.status !== undefined &&
-                              result?.examScore !== undefined)
-                          }
-                          data-ocid="results.input"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-sm font-bold">
-                        {result?.totalScore ?? "–"}/100
-                      </td>
-                      <td className="px-4 py-3">
-                        {result?.grade && (
-                          <Badge
-                            className={
-                              gradeColors[result.grade] ??
-                              "bg-slate-100 text-slate-700"
+                  {courseResults.map(({ student: s, result, ca }, i) => {
+                    const exam = result?.examScore ?? 0;
+                    const total = ca + exam;
+                    const { grade: ag, remarks: ar } = computeGrade(total);
+                    const displayGrade = result
+                      ? result.grade
+                      : exam > 0
+                        ? ag
+                        : "";
+                    const displayRemarks = result
+                      ? result.remark
+                      : exam > 0
+                        ? ar
+                        : "";
+                    const isEditable =
+                      settings.toggles.resultEntryEnabled &&
+                      (result?.status === "draft" ||
+                        result?.status === undefined);
+                    return (
+                      <tr
+                        key={s.matricNumber}
+                        className="border-b last:border-0 hover:bg-slate-50"
+                        data-ocid={`results.item.${i + 1}`}
+                      >
+                        <td className="px-3 py-2 text-sm text-slate-500">
+                          {i + 1}
+                        </td>
+                        <td className="px-3 py-2 text-sm font-medium min-w-[150px]">
+                          {s.name}
+                        </td>
+                        <td className="px-3 py-2 text-xs font-mono text-blue-600">
+                          {s.matricNumber}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="text-sm font-semibold text-slate-700">
+                            {ca}/40
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={60}
+                            className="w-20 h-8 text-sm"
+                            value={result?.examScore ?? ""}
+                            placeholder="0-60"
+                            onChange={(e) =>
+                              updateExamScore(
+                                s.matricNumber,
+                                Math.min(60, Math.max(0, +e.target.value)),
+                              )
                             }
+                            disabled={!isEditable}
+                            data-ocid="results.input"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-sm font-bold">
+                          {result ? `${total}/100` : "–"}
+                        </td>
+                        <td className="px-3 py-2">
+                          {displayGrade ? (
+                            <Badge
+                              className={`${gradeColorClass(displayGrade)} border-0 font-bold`}
+                            >
+                              {displayGrade}
+                            </Badge>
+                          ) : (
+                            <span className="text-slate-300">–</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={`text-xs font-semibold ${
+                              displayRemarks === "Pass"
+                                ? "text-green-600"
+                                : displayRemarks === "Fail"
+                                  ? "text-red-600"
+                                  : "text-slate-400"
+                            }`}
                           >
-                            {result.grade}
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs font-medium ${
-                            result?.remark === "Pass"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {result?.remark ?? "–"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                            {displayRemarks || "–"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          {result?.status && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs capitalize"
+                            >
+                              {result.status.replace(/_/g, " ")}
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            {courseResults.length > 0 && (
+              <div className="px-4 py-3 bg-slate-50 border-t flex flex-wrap gap-4 text-sm">
+                <span className="text-slate-600">
+                  <strong>Total:</strong> {courseResults.length}
+                </span>
+                <span className="text-green-700">
+                  <strong>Passed:</strong>{" "}
+                  {
+                    courseResults.filter((cr) => cr.result?.remark === "Pass")
+                      .length
+                  }
+                </span>
+                <span className="text-red-700">
+                  <strong>Failed:</strong>{" "}
+                  {
+                    courseResults.filter((cr) => cr.result?.remark === "Fail")
+                      .length
+                  }
+                </span>
+                <span className="text-slate-500">
+                  <strong>Pending:</strong> {missing.length}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -554,7 +796,8 @@ export function ResultEntry() {
             className="p-12 text-center text-slate-400"
             data-ocid="results.empty_state"
           >
-            Select a course to enter exam results.
+            <FileText size={40} className="mx-auto mb-3 text-slate-300" />
+            <p>Select a course to enter scores and manage the score sheet.</p>
           </CardContent>
         </Card>
       )}

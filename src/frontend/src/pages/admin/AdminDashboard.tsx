@@ -121,6 +121,7 @@ import { ResultSheetAdmin } from "./ResultSheetAdmin";
 import { ResultVerificationAdmin } from "./ResultVerificationAdmin";
 import { ScholarshipManagement } from "./ScholarshipManagement";
 import { ScoreAuditLog } from "./ScoreAuditLog";
+import { ScoreSheetResults } from "./ScoreSheetResults";
 import { SenateMeetingMinutes } from "./SenateMeetingMinutes";
 import { SenatePresentation } from "./SenatePresentation";
 import { StaffManagement } from "./StaffManagement";
@@ -162,6 +163,7 @@ type Page =
   | "documents-scans-admin"
   | "combination-courses"
   | "score-audit-log"
+  | "score-sheet-results"
   | "result-sheet-admin"
   | "transcript-management"
   | "dept-analytics"
@@ -1378,6 +1380,7 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "documents-scans-admin") return <DocumentsScansAdmin />;
   if (activePage === "combination-courses") return <CombinationCourses />;
   if (activePage === "score-audit-log") return <ScoreAuditLog />;
+  if (activePage === "score-sheet-results") return <ScoreSheetResults />;
   if (activePage === "result-sheet-admin") return <ResultSheetAdmin />;
   if (activePage === "transcript-management") return <TranscriptAdmin />;
   if (activePage === "dept-analytics") return <DepartmentAnalytics />;
