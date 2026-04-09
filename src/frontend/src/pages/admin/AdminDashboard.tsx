@@ -91,6 +91,7 @@ import { DataExportCenter } from "./DataExportCenter";
 import { DataImport } from "./DataImport";
 import { DefermentManagement } from "./DefermentManagement";
 import { DepartmentAnalytics } from "./DepartmentAnalytics";
+import { DistanceLearningAdmin } from "./DistanceLearningAdmin";
 import { DocumentAdmin } from "./DocumentAdmin";
 import { DocumentVerificationPortal } from "./DocumentVerificationPortal";
 import { DocumentsScansAdmin } from "./DocumentsScansAdmin";
@@ -113,6 +114,7 @@ import { LibraryAdmin } from "./LibraryAdmin";
 import { MalpracticeReports } from "./MalpracticeReports";
 import { ManualRegistration } from "./ManualRegistration";
 import { NoticeBoard } from "./NoticeBoard";
+import { PartTimeStudiesAdmin } from "./PartTimeStudiesAdmin";
 import { ProgressionAdmin } from "./ProgressionAdmin";
 import { RegistrationAdmin } from "./RegistrationAdmin";
 import { RegistrationDocumentArchive } from "./RegistrationDocumentArchive";
@@ -219,7 +221,9 @@ type Page =
   | "certificate-courses"
   | "malpractice-reports"
   | "id-cards"
-  | "student-profiles";
+  | "student-profiles"
+  | "distance-learning-admin"
+  | "part-time-studies-admin";
 
 interface AdminDashboardProps {
   activePage: Page;
@@ -430,7 +434,7 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
             Overview of all university operations
           </p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard
             title="Total Students"
             value={students.length}
@@ -454,6 +458,18 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
             value={memos.length}
             icon={<FileText size={22} />}
             color="amber"
+          />
+          <StatCard
+            title="DL Students"
+            value={24}
+            icon={<UserCheck size={22} />}
+            color="blue"
+          />
+          <StatCard
+            title="PT Students"
+            value={18}
+            icon={<Users size={22} />}
+            color="green"
           />
         </div>
         <div className="grid md:grid-cols-2 gap-6">
@@ -1468,5 +1484,8 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
         <CertificateCourses />
       </GatedRoute>
     );
+  if (activePage === "distance-learning-admin")
+    return <DistanceLearningAdmin />;
+  if (activePage === "part-time-studies-admin") return <PartTimeStudiesAdmin />;
   return null;
 }

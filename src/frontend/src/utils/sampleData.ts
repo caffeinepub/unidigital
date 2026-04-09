@@ -1,5 +1,16 @@
 import { ALL_FUEK_COURSES } from "./fuekCourseData";
 
+/**
+ * Study mode for a student — determines credit load limits.
+ * - full-time: regular on-campus (min 15–18C, max 24C per semester)
+ * - distance-learning: online/blended (min 10C, max 15C per semester)
+ * - part-time: evening/weekend (min 12C, max 16C per semester)
+ */
+export type StudentProgrammeType =
+  | "full-time"
+  | "distance-learning"
+  | "part-time";
+
 export interface StudentRecord {
   matricNumber: string;
   name: string;
@@ -8,6 +19,8 @@ export interface StudentRecord {
   department: string;
   subCombination?: string;
   institutionCategory?: "college_of_education" | "university" | "polytechnic";
+  /** Study mode — drives credit load limits in course registration (distinct from programmeType/NCE/NUC) */
+  studyMode?: StudentProgrammeType;
 }
 
 export interface CourseRecord {
@@ -235,6 +248,7 @@ export function initSampleData() {
       email: "amara@student.edu",
       level: "300",
       department: "Computer Science",
+      studyMode: "full-time",
     },
     {
       matricNumber: "ENG/2021/002",
@@ -242,6 +256,8 @@ export function initSampleData() {
       email: "emeka@student.edu",
       level: "200",
       department: "Engineering",
+      // Distance Learning demo student (min 10C, max 15C)
+      studyMode: "distance-learning",
     },
     {
       matricNumber: "MED/2021/003",
@@ -249,6 +265,8 @@ export function initSampleData() {
       email: "fatima@student.edu",
       level: "400",
       department: "Medicine",
+      // Part-Time demo student (min 12C, max 16C)
+      studyMode: "part-time",
     },
     {
       matricNumber: "LAW/2021/004",
@@ -256,6 +274,8 @@ export function initSampleData() {
       email: "chukwudi@student.edu",
       level: "200",
       department: "Law",
+      // Distance Learning demo student
+      studyMode: "distance-learning",
     },
     {
       matricNumber: "BUS/2021/005",
@@ -263,6 +283,7 @@ export function initSampleData() {
       email: "ngozi@student.edu",
       level: "100",
       department: "Business Administration",
+      studyMode: "full-time",
     },
     {
       matricNumber: "CSC/2021/006",
@@ -270,6 +291,8 @@ export function initSampleData() {
       email: "taiwo@student.edu",
       level: "300",
       department: "Computer Science",
+      // Part-Time demo student (evening programme)
+      studyMode: "part-time",
     },
     {
       matricNumber: "ENG/2022/007",
@@ -277,6 +300,7 @@ export function initSampleData() {
       email: "ifeanyi@student.edu",
       level: "100",
       department: "Engineering",
+      studyMode: "full-time",
     },
   ];
 

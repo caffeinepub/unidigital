@@ -14,6 +14,7 @@ import {
   updateJambStudent,
 } from "../../utils/jambData";
 import {
+  type StudentProgrammeType,
   type StudentRecord,
   getLocalStudents,
   saveLocalStudents,
@@ -37,6 +38,28 @@ interface StudentProfile extends StudentRecord {
   guardianPhone?: string;
   guardianRelationship?: string;
   nationality?: string;
+}
+
+const PROGRAMME_LABELS: Record<StudentProgrammeType, string> = {
+  "full-time": "Full-Time Studies",
+  "distance-learning": "Distance Learning",
+  "part-time": "Part-Time Studies",
+};
+
+const PROGRAMME_BADGE_STYLES: Record<StudentProgrammeType, string> = {
+  "full-time": "bg-blue-500/80 text-white",
+  "distance-learning": "bg-indigo-500/80 text-white",
+  "part-time": "bg-emerald-500/80 text-white",
+};
+
+function getProgrammeLabel(pt: StudentProgrammeType | undefined): string {
+  if (!pt) return "Full-Time Studies";
+  return PROGRAMME_LABELS[pt] ?? "Full-Time Studies";
+}
+
+function getProgrammeBadgeStyle(pt: StudentProgrammeType | undefined): string {
+  if (!pt) return PROGRAMME_BADGE_STYLES["full-time"];
+  return PROGRAMME_BADGE_STYLES[pt] ?? PROGRAMME_BADGE_STYLES["full-time"];
 }
 
 function mergeStudentData(): StudentProfile[] {
@@ -281,6 +304,7 @@ function StudentProfileView({
             email: form.email,
             level: form.level,
             department: form.department,
+            studyMode: form.studyMode,
           }
         : s,
     );
@@ -361,13 +385,22 @@ function StudentProfileView({
             <p className="text-blue-200 text-sm">
               {student.department} · {student.level}
             </p>
-            {student.status && (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {student.status && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${student.status === "Admitted" ? "bg-green-500" : "bg-amber-500"} text-white`}
+                >
+                  {student.status}
+                </span>
+              )}
               <span
-                className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full font-medium ${student.status === "Admitted" ? "bg-green-500" : "bg-amber-500"} text-white`}
+                className={`text-xs px-2 py-0.5 rounded-full font-medium ${getProgrammeBadgeStyle(student.studyMode as StudentProgrammeType | undefined)}`}
               >
-                {student.status}
+                {getProgrammeLabel(
+                  student.studyMode as StudentProgrammeType | undefined,
+                )}
               </span>
-            )}
+            </div>
           </div>
           <div className="flex flex-col gap-2 items-end">
             {!editing && (
@@ -555,6 +588,34 @@ function StudentProfileView({
                 editing={isAdmin && editing}
                 onChange={(v) => set("status", v)}
               />
+              {/* Programme Type — editable by student and admin */}
+              <div className={editing ? "" : ""}>
+                <p className="text-xs text-slate-500 mb-1">Programme Type</p>
+                {editing ? (
+                  <select
+                    value={form.studyMode ?? "full-time"}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        studyMode: e.target.value as StudentProgrammeType,
+                      }))
+                    }
+                    className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="full-time">Full-Time Studies</option>
+                    <option value="distance-learning">Distance Learning</option>
+                    <option value="part-time">Part-Time Studies</option>
+                  </select>
+                ) : (
+                  <p
+                    className={`text-sm font-medium px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 ${getProgrammeBadgeStyle(form.studyMode as StudentProgrammeType | undefined)}`}
+                  >
+                    {getProgrammeLabel(
+                      form.studyMode as StudentProgrammeType | undefined,
+                    )}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

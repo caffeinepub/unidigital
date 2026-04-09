@@ -424,6 +424,16 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Users size={18} />,
       key: "student-profiles",
     },
+    {
+      label: "Distance Learning",
+      icon: <Globe size={18} />,
+      key: "distance-learning-admin",
+    },
+    {
+      label: "Part-Time Studies",
+      icon: <Moon size={18} />,
+      key: "part-time-studies-admin",
+    },
   ],
   student: [
     {
