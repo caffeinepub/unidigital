@@ -416,6 +416,11 @@ const navByRole: Record<string, NavItem[]> = {
       key: "login-audit-log",
     },
     {
+      label: "User Management",
+      icon: <UserCheck size={18} />,
+      key: "user-management",
+    },
+    {
       label: "Login Activity",
       icon: <Activity size={18} />,
       key: "login-activity",

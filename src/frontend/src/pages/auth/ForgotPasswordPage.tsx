@@ -8,6 +8,7 @@ import {
   HelpCircle,
   KeyRound,
   Lock,
+  Mail,
   ShieldCheck,
 } from "lucide-react";
 import { useId, useRef, useState } from "react";
@@ -25,6 +26,7 @@ import {
   hasSecurityQuestion,
   logPasswordReset,
   passwordStrength,
+  resetPasswordViaEmail,
   saveLocalPassword,
   validatePasswordStrength,
   verifySecurityAnswer,
@@ -34,9 +36,41 @@ export interface ForgotPasswordPageProps {
   onBack: () => void;
   /** Called after a successful reset so caller can navigate to sign-in. */
   onResetComplete: () => void;
+  /** Default 'choose-method'. Pass 'set-password' for admin-forced reset (skip verification). */
+  startStage?: Stage;
 }
 
-type Stage = "verify-identity" | "set-password" | "success";
+type Stage =
+  | "choose-method"
+  | "verify-identity"
+  | "email-reset-request"
+  | "email-reset-preview"
+  | "set-password"
+  | "success";
+
+const USER_REGISTRY_KEY = "unidigital_user_registry";
+
+interface RegistryUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+function lookupUserByEmail(email: string): RegistryUser | null {
+  try {
+    const registry = JSON.parse(
+      localStorage.getItem(USER_REGISTRY_KEY) || "[]",
+    ) as RegistryUser[];
+    return (
+      registry.find(
+        (u) => u.email.toLowerCase() === email.trim().toLowerCase(),
+      ) ?? null
+    );
+  } catch {
+    return null;
+  }
+}
 
 function PasswordInputField({
   id,
@@ -124,20 +158,28 @@ function StrengthBar({ pw }: { pw: string }) {
 export function ForgotPasswordPage({
   onBack,
   onResetComplete,
+  startStage,
 }: ForgotPasswordPageProps) {
-  const [stage, setStage] = useState<Stage>("verify-identity");
+  const [stage, setStage] = useState<Stage>(startStage ?? "choose-method");
   const [answer, setAnswer] = useState("");
   const [answerError, setAnswerError] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [foundUser, setFoundUser] = useState<RegistryUser | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwError, setPwError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetMethod, setResetMethod] = useState<"security-question" | "email">(
+    "security-question",
+  );
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const securityQuestion = getSecurityQuestion();
   const hasSQ = hasSecurityQuestion();
 
   const answerInputId = useId();
+  const emailInputId = useId();
   const newPwInputId = useId();
   const confirmPwInputId = useId();
 
@@ -148,20 +190,47 @@ export function ForgotPasswordPage({
       return;
     }
     setLoading(true);
-    // Simulate slight delay for realism
     setTimeout(() => {
       const correct = verifySecurityAnswer(answer);
       if (correct) {
-        logPasswordReset("success");
+        logPasswordReset("success", "security-question");
+        setResetMethod("security-question");
         setStage("set-password");
       } else {
-        logPasswordReset("failed");
+        logPasswordReset("failed", "security-question");
         setAnswerError(
           "Incorrect answer. Please try again or contact your system administrator.",
         );
       }
       setLoading(false);
     }, 600);
+  }
+
+  function handleEmailRequest() {
+    setEmailError("");
+    if (!emailInput.trim() || !emailInput.includes("@")) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+    setLoading(true);
+    setTimeout(() => {
+      const user = lookupUserByEmail(emailInput);
+      // Always show the "email sent" message for security — don't reveal if not found
+      if (user) {
+        setFoundUser(user);
+        setStage("email-reset-preview");
+      } else {
+        // Still proceed to preview to not leak account existence
+        setFoundUser({
+          id: emailInput,
+          name: "User",
+          email: emailInput.trim(),
+          role: "user",
+        });
+        setStage("email-reset-preview");
+      }
+      setLoading(false);
+    }, 700);
   }
 
   function handleSetPassword() {
@@ -177,10 +246,13 @@ export function ForgotPasswordPage({
     }
     setLoading(true);
     setTimeout(() => {
-      saveLocalPassword(newPassword);
+      if (resetMethod === "email") {
+        resetPasswordViaEmail(foundUser?.id ?? "", newPassword);
+      } else {
+        saveLocalPassword(newPassword);
+      }
       setStage("success");
       setLoading(false);
-      // Auto-redirect after 3 seconds
       successTimerRef.current = setTimeout(() => {
         onResetComplete();
       }, 3000);
@@ -204,7 +276,83 @@ export function ForgotPasswordPage({
 
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
-          {/* ── Stage: Verify Identity ── */}
+          {/* ── Stage: Choose Method ── */}
+          {stage === "choose-method" && (
+            <Card className="bg-white/10 border-white/20 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-11 h-11 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <KeyRound size={22} className="text-blue-300" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-lg">
+                      Reset Your Password
+                    </CardTitle>
+                    <p className="text-slate-400 text-xs mt-0.5">
+                      How would you like to verify your identity?
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setStage("verify-identity")}
+                  className="w-full text-left p-4 rounded-xl border-2 border-white/15 bg-white/5 hover:bg-white/10 hover:border-blue-400/60 transition-all"
+                  data-ocid="forgot-pw.method-security-question"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <HelpCircle size={18} className="text-amber-300" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">
+                        Use my Security Question
+                      </p>
+                      <p className="text-slate-400 text-xs mt-0.5">
+                        Answer the security question you set up when creating
+                        your account.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStage("email-reset-request")}
+                  className="w-full text-left p-4 rounded-xl border-2 border-white/15 bg-white/5 hover:bg-white/10 hover:border-blue-400/60 transition-all"
+                  data-ocid="forgot-pw.method-email"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Mail size={18} className="text-blue-300" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">
+                        Send Reset Email
+                      </p>
+                      <p className="text-slate-400 text-xs mt-0.5">
+                        Receive a password reset link at your registered email
+                        address.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="w-full flex items-center justify-center gap-1.5 text-slate-400 text-xs hover:text-slate-200 transition-colors mt-2"
+                  data-ocid="forgot-pw.back-link"
+                >
+                  <ArrowLeft size={13} />
+                  Back to Sign In
+                </button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Stage: Verify Identity (Security Question) ── */}
           {stage === "verify-identity" && (
             <Card className="bg-white/10 border-white/20 backdrop-blur-sm">
               <CardHeader className="pb-3">
@@ -214,7 +362,7 @@ export function ForgotPasswordPage({
                   </div>
                   <div>
                     <CardTitle className="text-white text-lg">
-                      Forgot Password
+                      Security Question Verification
                     </CardTitle>
                     <p className="text-slate-400 text-xs mt-0.5">
                       Verify your identity to reset your portal password
@@ -224,7 +372,6 @@ export function ForgotPasswordPage({
               </CardHeader>
               <CardContent className="space-y-5">
                 {!hasSQ ? (
-                  /* No security question set */
                   <div className="text-center py-6 space-y-4">
                     <div className="w-14 h-14 bg-destructive/20 rounded-full flex items-center justify-center mx-auto">
                       <Lock size={24} className="text-red-400" />
@@ -234,40 +381,22 @@ export function ForgotPasswordPage({
                         No recovery method found
                       </p>
                       <p className="text-slate-400 text-sm mt-1 leading-relaxed">
-                        You haven't set up a security question yet. Please
-                        contact your system administrator to reset your account,
-                        or sign in with Internet Identity and update your
-                        security settings.
+                        You haven't set up a security question yet. Try the
+                        email reset method instead, or contact your system
+                        administrator.
                       </p>
-                    </div>
-                    <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-left text-xs text-slate-400 space-y-1">
-                      <p className="font-semibold text-slate-300">
-                        To set up a recovery method:
-                      </p>
-                      <p>
-                        1. Sign in using Internet Identity (your primary
-                        credential)
-                      </p>
-                      <p>
-                        2. Go to{" "}
-                        <strong className="text-white">My Profile</strong> →{" "}
-                        <strong className="text-white">Security</strong> tab
-                      </p>
-                      <p>3. Set a security question and answer</p>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={onBack}
+                      onClick={() => setStage("choose-method")}
                       className="w-full border-white/20 text-white hover:bg-white/10 gap-2"
-                      data-ocid="forgot-pw.back-to-login.btn"
                     >
                       <ArrowLeft size={15} />
-                      Back to Sign In
+                      Back to Reset Options
                     </Button>
                   </div>
                 ) : (
-                  /* Security question form */
                   <>
                     <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3">
                       <p className="text-xs text-slate-400 mb-1 font-medium uppercase tracking-wide">
@@ -329,15 +458,202 @@ export function ForgotPasswordPage({
 
                     <button
                       type="button"
-                      onClick={onBack}
+                      onClick={() => setStage("choose-method")}
                       className="w-full flex items-center justify-center gap-1.5 text-slate-400 text-xs hover:text-slate-200 transition-colors"
                       data-ocid="forgot-pw.back-link"
                     >
                       <ArrowLeft size={13} />
-                      Back to Sign In
+                      Back to Reset Options
                     </button>
                   </>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Stage: Email Reset Request ── */}
+          {stage === "email-reset-request" && (
+            <Card className="bg-white/10 border-white/20 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-11 h-11 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <Mail size={22} className="text-blue-300" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-lg">
+                      Email Password Reset
+                    </CardTitle>
+                    <p className="text-slate-400 text-xs mt-0.5">
+                      Enter your registered email address
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor={emailInputId}
+                    className="text-slate-300 text-sm"
+                  >
+                    Registered Email Address
+                  </Label>
+                  <Input
+                    id={emailInputId}
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => {
+                      setEmailInput(e.target.value);
+                      setEmailError("");
+                    }}
+                    placeholder="you@university.edu.ng"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-slate-600"
+                    autoFocus
+                    data-ocid="forgot-pw.email-input"
+                  />
+                  {emailError && (
+                    <div className="flex items-start gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5 mt-1">
+                      <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                      {emailError}
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleEmailRequest}
+                  disabled={loading || !emailInput.trim()}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold gap-2"
+                  data-ocid="forgot-pw.email-submit-btn"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Processing…
+                    </>
+                  ) : (
+                    <>
+                      <Mail size={16} />
+                      Send Reset Link
+                    </>
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setStage("choose-method")}
+                  className="w-full flex items-center justify-center gap-1.5 text-slate-400 text-xs hover:text-slate-200 transition-colors"
+                  data-ocid="forgot-pw.back-link"
+                >
+                  <ArrowLeft size={13} />
+                  Back to Reset Options
+                </button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Stage: Email Reset Preview ── */}
+          {stage === "email-reset-preview" && (
+            <Card className="bg-white/10 border-white/20 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-11 h-11 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <Mail size={22} className="text-blue-300" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-lg">
+                      Reset Email Preview
+                    </CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Demo mode banner */}
+                <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
+                  <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
+                  <span>
+                    📧 <strong>Email sending is currently in demo mode.</strong>{" "}
+                    In production, this email would be sent automatically. Click
+                    "Continue to Reset" to proceed.
+                  </span>
+                </div>
+
+                {/* Simulated email card */}
+                <div className="rounded-lg border border-white/20 bg-white/5 overflow-hidden font-mono text-xs">
+                  {/* Email header */}
+                  <div className="bg-white/10 border-b border-white/15 px-4 py-2.5 space-y-1">
+                    <div className="flex gap-2">
+                      <span className="text-slate-400 w-16 flex-shrink-0">
+                        FROM:
+                      </span>
+                      <span className="text-slate-200">
+                        noreply@unidigital.edu.ng
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-slate-400 w-16 flex-shrink-0">
+                        TO:
+                      </span>
+                      <span className="text-slate-200 break-all">
+                        {foundUser?.email ?? emailInput}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-slate-400 w-16 flex-shrink-0">
+                        SUBJECT:
+                      </span>
+                      <span className="text-white font-semibold">
+                        UniDigital Password Reset Request
+                      </span>
+                    </div>
+                  </div>
+                  {/* Email body */}
+                  <div className="px-4 py-4 space-y-3 font-sans text-sm text-slate-200 leading-relaxed">
+                    <p>Dear {foundUser?.name ?? "User"},</p>
+                    <p>
+                      A password reset was requested for your UniDigital
+                      account. Click the link below to reset your password:
+                    </p>
+                    <div className="flex justify-center my-3">
+                      <span className="inline-block bg-blue-500 text-white text-xs px-5 py-2.5 rounded-lg font-semibold cursor-default">
+                        Reset My Password →
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-xs">
+                      This link expires in{" "}
+                      <strong className="text-white">30 minutes</strong>. If you
+                      didn't request this, please contact your system
+                      administrator.
+                    </p>
+                    <hr className="border-white/10" />
+                    <p className="text-xs text-slate-500">
+                      — UniDigital MIS Team
+                      <br />
+                      Federal University of Education, Kontagora
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setResetMethod("email");
+                    setStage("set-password");
+                  }}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold gap-2"
+                  data-ocid="forgot-pw.email-continue-btn"
+                >
+                  <KeyRound size={16} />
+                  Continue to Reset →
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setStage("email-reset-request")}
+                  className="w-full flex items-center justify-center gap-1.5 text-slate-400 text-xs hover:text-slate-200 transition-colors"
+                >
+                  <ArrowLeft size={13} />
+                  Back
+                </button>
               </CardContent>
             </Card>
           )}
@@ -355,17 +671,19 @@ export function ForgotPasswordPage({
                       Reset Password
                     </CardTitle>
                     <p className="text-slate-400 text-xs mt-0.5">
-                      Identity verified — set your new portal password
+                      {resetMethod === "email"
+                        ? "Email verified — set your new portal password"
+                        : "Identity verified — set your new portal password"}
                     </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
-                {/* Verified banner */}
                 <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2.5 text-green-300 text-xs">
                   <CheckCircle2 size={14} className="flex-shrink-0" />
-                  Identity verified successfully. You can now set a new
-                  password.
+                  {resetMethod === "email"
+                    ? "Email reset confirmed. You can now set a new password."
+                    : "Identity verified successfully. You can now set a new password."}
                 </div>
 
                 <div className="space-y-1.5">
@@ -408,7 +726,6 @@ export function ForgotPasswordPage({
                   />
                 </div>
 
-                {/* Match indicator */}
                 {confirmPassword && newPassword && (
                   <p
                     className={`text-xs flex items-center gap-1.5 ${
@@ -516,7 +833,6 @@ export function ForgotPasswordPage({
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="px-5 py-3 text-center border-t border-white/10">
         <p className="text-slate-600 text-xs">
           © {new Date().getFullYear()} UniDigital · Federal University of

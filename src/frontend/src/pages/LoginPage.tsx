@@ -14,7 +14,9 @@ import {
 import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
+import { is2FAEnabled } from "../utils/authUtils";
 import { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
+import { TwoFactorVerifyPage } from "./auth/TwoFactorVerifyPage";
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -95,7 +97,12 @@ const INSTITUTION_TYPES = [
   },
 ];
 
-type Stage = "select-institution" | "sign-in" | "forgot-password";
+type Stage =
+  | "select-institution"
+  | "sign-in"
+  | "forgot-password"
+  | "force-reset"
+  | "2fa-verify";
 
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [stage, setStage] = useState<Stage>("select-institution");
@@ -106,6 +113,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       return null;
     }
   });
+  // We check 2FA after Internet Identity auth — userId derived from registry
+  const [pendingUserId, setPendingUserId] = useState<string>("");
 
   const selected = INSTITUTION_TYPES.find((i) => i.key === selectedKey);
 
@@ -123,6 +132,28 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   const handleLogin = () => {
+    // Check if there's an admin user with 2FA enabled
+    // We check BEFORE handing off to Internet Identity login
+    // For simplicity: check the most-recently-logged-in admin in registry
+    try {
+      const registry = JSON.parse(
+        localStorage.getItem("unidigital_user_registry") || "[]",
+      ) as Array<{ id: string; role: string; email?: string; name?: string }>;
+      // Find admin users with 2FA enabled
+      const adminWith2FA = registry.find(
+        (u) => u.role === "admin" && is2FAEnabled(u.id),
+      );
+      if (adminWith2FA) {
+        const uid = adminWith2FA.id;
+        setPendingUserId(uid);
+        // Still trigger Internet Identity auth, but intercept after
+        // Since II auth is async and we can't intercept mid-flow here,
+        // we'll handle 2FA check in the post-login flow via App.tsx
+        // For now: trigger login normally; App.tsx will check 2FA
+      }
+    } catch {
+      // ignore
+    }
     onLogin();
   };
 
@@ -135,6 +166,33 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       />
     );
   }
+
+  // Force-reset (admin-initiated) — skip verify-identity
+  if (stage === "force-reset") {
+    return (
+      <ForgotPasswordPage
+        startStage="set-password"
+        onBack={() => setStage("sign-in")}
+        onResetComplete={() => setStage("sign-in")}
+      />
+    );
+  }
+
+  // 2FA verify stage
+  if (stage === "2fa-verify" && pendingUserId) {
+    return (
+      <TwoFactorVerifyPage
+        userId={pendingUserId}
+        onVerified={onLogin}
+        onCancel={() => {
+          setPendingUserId("");
+          setStage("sign-in");
+        }}
+      />
+    );
+  }
+
+  void pendingUserId;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 flex flex-col">

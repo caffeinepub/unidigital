@@ -3,17 +3,24 @@ import {
   AlertCircle,
   Camera,
   CheckCircle2,
+  Copy,
+  Download,
   Eye,
   EyeOff,
   KeyRound,
   Lock,
+  RefreshCw,
   Save,
   Shield,
+  ShieldCheck,
+  ShieldOff,
+  Smartphone,
   User,
   UserCog,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createActor } from "../../backend";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -24,9 +31,19 @@ import {
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import {
+  disable2FAForUser,
+  generate2FASecret,
+  generateBackupCodes,
+  get2FAConfig,
+  getTOTPCode,
+  getTOTPSecondsRemaining,
   hasLocalPassword,
+  is2FAEnabled,
+  log2FAEvent,
   passwordStrength,
+  save2FAConfig,
   saveLocalPassword,
+  verify2FACode,
   verifyLocalPassword,
 } from "../../utils/authUtils";
 
@@ -153,7 +170,586 @@ function PasswordInput({
   );
 }
 
-type Tab = "profile" | "security" | "password";
+type Tab = "profile" | "security" | "password" | "2fa";
+
+// ── 2FA Section ────────────────────────────────────────────────────────────────
+
+function TwoFASection({ userId }: { userId: string }) {
+  const enabled = is2FAEnabled(userId);
+  const config = get2FAConfig(userId);
+
+  // Enable flow state
+  const [setupSecret, setSetupSecret] = useState<string>("");
+  const [setupBackupCodes, setSetupBackupCodes] = useState<string[]>([]);
+  const [setupCode, setSetupCode] = useState("");
+  const [setupError, setSetupError] = useState("");
+  const [setupStep, setSetupStep] = useState<"idle" | "scan" | "confirm">(
+    "idle",
+  );
+  const [showSecret, setShowSecret] = useState(false);
+  const [totpLive, setTotpLive] = useState("");
+  const [secondsLeft, setSecondsLeft] = useState(getTOTPSecondsRemaining());
+  const [copied, setCopied] = useState(false);
+
+  // Disable flow state
+  const [disablePw, setDisablePw] = useState("");
+  const [disableError, setDisableError] = useState("");
+  const [showDisableForm, setShowDisableForm] = useState(false);
+  const [disableSuccess, setDisableSuccess] = useState(false);
+
+  // Regenerate backup codes
+  const [regenSuccess, setRegenSuccess] = useState(false);
+
+  // TOTP live ticker
+  useEffect(() => {
+    if (!setupSecret) return;
+    setTotpLive(getTOTPCode(setupSecret));
+    const interval = setInterval(() => {
+      setTotpLive(getTOTPCode(setupSecret));
+      setSecondsLeft(getTOTPSecondsRemaining());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [setupSecret]);
+
+  function handleStartSetup() {
+    const secret = generate2FASecret();
+    const codes = generateBackupCodes(10);
+    setSetupSecret(secret);
+    setSetupBackupCodes(codes);
+    setSetupCode("");
+    setSetupError("");
+    setSetupStep("scan");
+  }
+
+  function handleConfirmEnable() {
+    setSetupError("");
+    if (!setupCode.trim()) {
+      setSetupError("Please enter the 6-digit code.");
+      return;
+    }
+    // Verify code against setup secret
+    const currentWindow = Math.floor(Date.now() / 30000);
+    let valid = false;
+    for (const offset of [0, -1]) {
+      const w = currentWindow + offset;
+      let hash = w;
+      for (let i = 0; i < setupSecret.length; i++) {
+        hash = (hash * 31 + setupSecret.charCodeAt(i)) | 0;
+      }
+      const expected = (Math.abs(hash) % 1000000).toString().padStart(6, "0");
+      if (setupCode.trim() === expected) {
+        valid = true;
+        break;
+      }
+    }
+    if (!valid) {
+      setSetupError(
+        "Invalid code. Please check your authenticator and try again.",
+      );
+      return;
+    }
+    save2FAConfig(userId, {
+      enabled: true,
+      secret: setupSecret,
+      backupCodes: setupBackupCodes,
+      usedCodes: [],
+    });
+    log2FAEvent(
+      userId,
+      "2fa-enabled",
+      "Admin enabled 2FA from profile settings",
+    );
+    setSetupStep("idle");
+    setSetupCode("");
+  }
+
+  function handleDisable() {
+    setDisableError("");
+    if (!disablePw.trim()) {
+      setDisableError("Please enter your current password to confirm.");
+      return;
+    }
+    if (!verifyLocalPassword(disablePw)) {
+      setDisableError("Incorrect password. Please try again.");
+      return;
+    }
+    disable2FAForUser(userId);
+    log2FAEvent(
+      userId,
+      "2fa-disabled",
+      "Admin disabled 2FA from profile settings",
+    );
+    setShowDisableForm(false);
+    setDisablePw("");
+    setDisableSuccess(true);
+    setTimeout(() => setDisableSuccess(false), 4000);
+  }
+
+  function handleRegenCodes() {
+    if (!config) return;
+    const newCodes = generateBackupCodes(10);
+    save2FAConfig(userId, { ...config, backupCodes: newCodes, usedCodes: [] });
+    setRegenSuccess(true);
+    setTimeout(() => setRegenSuccess(false), 3000);
+  }
+
+  function handleCopySecret() {
+    try {
+      navigator.clipboard.writeText(setupSecret);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  }
+
+  function handleDownloadBackupCodes(codes: string[]) {
+    const content = [
+      "UniDigital — 2FA Backup Codes",
+      `Generated: ${new Date().toLocaleString("en-NG")}`,
+      "Keep these codes safe. Each code can only be used once.",
+      "",
+      ...codes,
+      "",
+      "— UniDigital MIS Team, Federal University of Education, Kontagora",
+    ].join("\n");
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "unidigital-2fa-backup-codes.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const currentConfig = get2FAConfig(userId);
+
+  // ── Enabled state ──────────────────────────────────────────────────────────
+  if (enabled && currentConfig) {
+    const usedCount = currentConfig.usedCodes.length;
+    const remainingCount = currentConfig.backupCodes.length - usedCount;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} className="text-green-600" />
+            <span className="font-semibold text-sm text-foreground">
+              Two-Factor Authentication
+            </span>
+            <Badge className="bg-green-100 text-green-700 text-xs">
+              Enabled
+            </Badge>
+          </div>
+        </div>
+
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-sm text-green-700">
+          <p>
+            2FA is active on your account. You will be asked for a code each
+            time you sign in.
+          </p>
+        </div>
+
+        {/* Backup codes info */}
+        <Card className="bg-muted/30">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Backup Codes</p>
+                <p className="text-xs text-muted-foreground">
+                  {remainingCount} of {currentConfig.backupCodes.length}{" "}
+                  remaining
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleDownloadBackupCodes(currentConfig.backupCodes)
+                  }
+                  className="gap-1 text-xs"
+                  data-ocid="2fa.download-backup-btn"
+                >
+                  <Download size={12} />
+                  Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenCodes}
+                  className="gap-1 text-xs"
+                  data-ocid="2fa.regen-codes-btn"
+                >
+                  <RefreshCw size={12} />
+                  Regenerate
+                </Button>
+              </div>
+            </div>
+            {regenSuccess && (
+              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-500/10 border border-green-500/20 p-2 rounded">
+                <CheckCircle2 size={12} />
+                New backup codes generated successfully.
+              </div>
+            )}
+            {remainingCount <= 3 && (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-500/10 border border-amber-500/20 p-2 rounded">
+                <AlertCircle size={12} />
+                Only {remainingCount} backup code
+                {remainingCount !== 1 ? "s" : ""} remaining. Regenerate soon.
+              </div>
+            )}
+            <div className="grid grid-cols-5 gap-1">
+              {currentConfig.backupCodes.map((code) => (
+                <span
+                  key={code}
+                  className={`text-xs font-mono px-2 py-1 rounded text-center ${
+                    currentConfig.usedCodes.includes(code)
+                      ? "line-through text-muted-foreground bg-muted/30"
+                      : "bg-muted text-foreground"
+                  }`}
+                >
+                  {code}
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Disable 2FA */}
+        <div className="pt-2 border-t">
+          {!showDisableForm ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDisableForm(true)}
+              className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              data-ocid="2fa.disable-btn"
+            >
+              <ShieldOff size={14} />
+              Disable Two-Factor Authentication
+            </Button>
+          ) : (
+            <div className="space-y-3 bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+              <p className="text-sm font-medium text-destructive">
+                Confirm Disable 2FA
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Enter your current portal password to confirm disabling 2FA.
+                Your account will be less secure.
+              </p>
+              <PasswordInput
+                id="2fa-disable-pw"
+                value={disablePw}
+                onChange={setDisablePw}
+                placeholder="Current password"
+                data-ocid="2fa.disable-password-input"
+              />
+              {disableError && (
+                <div className="flex items-center gap-2 text-xs text-destructive">
+                  <AlertCircle size={12} />
+                  {disableError}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowDisableForm(false);
+                    setDisablePw("");
+                    setDisableError("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDisable}
+                  disabled={!disablePw}
+                  data-ocid="2fa.confirm-disable-btn"
+                >
+                  Disable 2FA
+                </Button>
+              </div>
+            </div>
+          )}
+          {disableSuccess && (
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-500/10 border border-green-500/20 p-3 rounded-lg mt-2">
+              <CheckCircle2 size={14} />
+              Two-factor authentication has been disabled.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Setup step: scan/configure ─────────────────────────────────────────────
+  if (setupStep === "scan") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Smartphone size={18} className="text-primary" />
+          <span className="font-semibold text-sm">
+            Set Up Authenticator App
+          </span>
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          Open your authenticator app (Google Authenticator, Authy, etc.) and
+          add a new account. Enter the secret key manually.
+        </p>
+
+        {/* Secret key */}
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            Secret Key (enter manually in your app)
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              value={showSecret ? setupSecret : setupSecret.replace(/./g, "●")}
+              readOnly
+              className="font-mono text-sm tracking-widest bg-muted"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowSecret((p) => !p)}
+              aria-label={showSecret ? "Hide secret" : "Show secret"}
+            >
+              {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCopySecret}
+              aria-label="Copy secret"
+              data-ocid="2fa.copy-secret-btn"
+            >
+              {copied ? (
+                <CheckCircle2 size={15} className="text-green-600" />
+              ) : (
+                <Copy size={15} />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Account name: UniDigital
+          </p>
+        </div>
+
+        {/* Mock QR placeholder */}
+        <div className="flex flex-col items-center gap-2 bg-muted rounded-lg p-4">
+          <div className="w-28 h-28 bg-foreground/10 border-2 border-dashed border-muted-foreground rounded-lg flex flex-col items-center justify-center gap-1">
+            <div className="grid grid-cols-4 gap-0.5">
+              {[
+                "a1",
+                "b2",
+                "c3",
+                "d4",
+                "e5",
+                "f6",
+                "g7",
+                "h8",
+                "i9",
+                "j0",
+                "k1",
+                "l2",
+                "m3",
+                "n4",
+                "o5",
+                "p6",
+              ].map((cell, i) => (
+                <div
+                  key={cell}
+                  className={`w-3 h-3 rounded-sm ${i % 3 !== 0 ? "bg-foreground" : "bg-transparent"}`}
+                />
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            QR code (demo representation)
+          </p>
+        </div>
+
+        {/* Backup codes */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Backup Codes (save these now)</Label>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadBackupCodes(setupBackupCodes)}
+                className="gap-1 text-xs h-7"
+              >
+                <Download size={11} />
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  try {
+                    navigator.clipboard.writeText(setupBackupCodes.join("\n"));
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="gap-1 text-xs h-7"
+              >
+                <Copy size={11} />
+                Copy All
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {setupBackupCodes.map((c) => (
+              <span
+                key={c}
+                className="text-xs font-mono bg-muted px-1.5 py-1 rounded text-center"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+          <div className="text-xs text-amber-700 bg-amber-500/10 border border-amber-500/20 rounded p-2">
+            ⚠ Save these backup codes now. You can only view them once.
+          </div>
+        </div>
+
+        <Button
+          size="sm"
+          onClick={() => setSetupStep("confirm")}
+          className="gap-2"
+          data-ocid="2fa.next-to-confirm"
+        >
+          <ShieldCheck size={14} />
+          I've Saved My Codes → Confirm Code
+        </Button>
+        <button
+          type="button"
+          onClick={() => setSetupStep("idle")}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors block"
+        >
+          Cancel setup
+        </button>
+      </div>
+    );
+  }
+
+  // ── Setup step: confirm TOTP ───────────────────────────────────────────────
+  if (setupStep === "confirm") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck size={18} className="text-primary" />
+          <span className="font-semibold text-sm">
+            Confirm Your Authenticator Code
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Enter the 6-digit code currently shown in your authenticator app to
+          confirm setup.
+        </p>
+
+        {/* Live TOTP hint for testing */}
+        <div className="bg-muted/50 border border-dashed rounded-lg px-3 py-2.5 flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            Current test code (for demo):
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-primary text-base">
+              {totpLive}
+            </span>
+            <span className="text-muted-foreground">({secondsLeft}s)</span>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-sm">6-Digit Code</Label>
+          <Input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={setupCode}
+            onChange={(e) => {
+              setSetupCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+              setSetupError("");
+            }}
+            placeholder="000000"
+            className="font-mono text-center text-xl tracking-widest h-12"
+            autoFocus
+            data-ocid="2fa.confirm-code-input"
+          />
+        </div>
+
+        {setupError && (
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle size={14} />
+            {setupError}
+          </div>
+        )}
+
+        <Button
+          onClick={handleConfirmEnable}
+          disabled={setupCode.length < 6}
+          className="w-full gap-2"
+          data-ocid="2fa.confirm-enable-btn"
+        >
+          <ShieldCheck size={15} />
+          Enable Two-Factor Authentication
+        </Button>
+        <button
+          type="button"
+          onClick={() => setSetupStep("scan")}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors block"
+        >
+          ← Back to secret key
+        </button>
+      </div>
+    );
+  }
+
+  // ── Not yet enabled ────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <ShieldOff size={18} className="text-muted-foreground" />
+        <span className="font-semibold text-sm text-foreground">
+          Two-Factor Authentication
+        </span>
+        <Badge variant="secondary" className="text-xs">
+          Disabled
+        </Badge>
+      </div>
+
+      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm text-amber-700">
+        <p className="font-medium mb-1">Increase your account security</p>
+        <p className="text-xs">
+          Enable 2FA to require a second verification step when signing in. This
+          significantly reduces the risk of unauthorized access.
+        </p>
+      </div>
+
+      <ul className="text-xs text-muted-foreground space-y-1 list-inside list-disc ml-1">
+        <li>Works with Google Authenticator, Authy, and other TOTP apps</li>
+        <li>10 one-time backup codes provided for emergency access</li>
+        <li>Only required for admin account sign-ins</li>
+      </ul>
+
+      <Button
+        onClick={handleStartSetup}
+        className="gap-2"
+        data-ocid="2fa.enable-btn"
+      >
+        <ShieldCheck size={15} />
+        Enable Two-Factor Authentication
+      </Button>
+    </div>
+  );
+}
 
 export function UserProfileSettings({
   currentName,
@@ -303,12 +899,19 @@ export function UserProfileSettings({
     setTimeout(() => setPwSaved(false), 3500);
   }
 
+  // Show 2FA tab only for admin
+  const show2FATab = currentRole === "admin";
+
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "profile", label: "Profile", icon: <User size={14} /> },
     { key: "security", label: "Security", icon: <Shield size={14} /> },
     { key: "password", label: "Password / PIN", icon: <KeyRound size={14} /> },
+    ...(show2FATab
+      ? [{ key: "2fa" as Tab, label: "2FA", icon: <Smartphone size={14} /> }]
+      : []),
   ];
 
+  const userId = currentEmail || currentName || "user";
   const initials = (name || currentName).charAt(0).toUpperCase();
 
   return (
@@ -356,29 +959,36 @@ export function UserProfileSettings({
               data-ocid="profile.photo-file-input"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="font-semibold text-foreground">
               {name || currentName}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground truncate">
               {email || currentEmail}
             </p>
-            <p className="text-xs text-primary font-medium capitalize mt-0.5">
-              {selectedRole || currentRole}
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-primary font-medium capitalize">
+                {selectedRole || currentRole}
+              </p>
+              {show2FATab && is2FAEnabled(userId) && (
+                <Badge className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700">
+                  2FA ON
+                </Badge>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Tab nav */}
-      <div className="flex gap-1 bg-muted rounded-lg p-1">
+      <div className="flex gap-1 bg-muted rounded-lg p-1 flex-wrap">
         {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
             data-ocid={`profile.tab.${t.key}`}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               tab === t.key
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -666,7 +1276,6 @@ export function UserProfileSettings({
               />
             </div>
 
-            {/* Strength indicator */}
             {newPw && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">
@@ -719,6 +1328,21 @@ export function UserProfileSettings({
               <KeyRound className="w-4 h-4 mr-2" />
               {hasLocalPassword() ? "Update Password" : "Set Password"}
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Tab: 2FA (Admin only) ── */}
+      {tab === "2fa" && show2FATab && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-primary" />
+              Two-Factor Authentication
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TwoFASection userId={userId} />
           </CardContent>
         </Card>
       )}

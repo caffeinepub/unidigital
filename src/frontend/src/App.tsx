@@ -12,8 +12,11 @@ import { LoginPage } from "./pages/LoginPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { LoginAuditLog } from "./pages/admin/LoginAuditLog";
+import { UserManagementPage } from "./pages/admin/UserManagementPage";
 import { AlumniDashboard } from "./pages/alumni/AlumniDashboard";
 import type { AlumniPage } from "./pages/alumni/AlumniDashboard";
+import { LoginDetailsSetupPage } from "./pages/auth/LoginDetailsSetupPage";
+import { TwoFactorVerifyPage } from "./pages/auth/TwoFactorVerifyPage";
 import { BursaryDashboard } from "./pages/bursary/BursaryDashboard";
 import { HODDashboard } from "./pages/hod/HODDashboard";
 import { HRDashboard } from "./pages/hr/HRDashboard";
@@ -25,6 +28,11 @@ import { StaffSelfService } from "./pages/shared/StaffSelfService";
 import { StudentProfilePortal } from "./pages/shared/StudentProfilePortal";
 import { UserProfileSettings } from "./pages/shared/UserProfileSettings";
 import { StudentDashboard } from "./pages/student/StudentDashboard";
+import {
+  hasLocalPassword,
+  hasSecurityQuestion,
+  is2FAEnabled,
+} from "./utils/authUtils";
 import { initSampleData, initV6, initV9, initV19 } from "./utils/sampleData";
 import {
   recordSessionEnd,
@@ -38,12 +46,67 @@ initV9();
 initV19();
 seedDemoSessions();
 
-type AppState = "loading" | "login" | "onboarding" | "app";
+type AppState =
+  | "loading"
+  | "login"
+  | "onboarding"
+  | "login-details-setup"
+  | "2fa-verify"
+  | "app";
 
 interface UserProfile {
   name: string;
   email: string;
   role: string;
+}
+
+const USER_REGISTRY_KEY = "unidigital_user_registry";
+
+function registerUser(profile: UserProfile & { studyMode?: string }) {
+  try {
+    const registry = JSON.parse(
+      localStorage.getItem(USER_REGISTRY_KEY) || "[]",
+    ) as unknown[];
+    const existing = registry as Array<Record<string, unknown>>;
+    const id = profile.email || profile.name || `user-${Date.now()}`;
+    const idx = existing.findIndex((u) => (u.id as string) === id);
+    const entry = {
+      id,
+      name: profile.name,
+      email: profile.email,
+      role: profile.role,
+      studyMode: (profile as { studyMode?: string }).studyMode ?? "full-time",
+      status: "active",
+      createdAt:
+        idx >= 0
+          ? (existing[idx].createdAt as string)
+          : new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+    };
+    if (idx >= 0) {
+      existing[idx] = { ...existing[idx], ...entry };
+    } else {
+      existing.push(entry);
+    }
+    localStorage.setItem(USER_REGISTRY_KEY, JSON.stringify(existing));
+  } catch {
+    // ignore
+  }
+}
+
+function updateLastLogin(userId: string) {
+  try {
+    const registry = JSON.parse(
+      localStorage.getItem(USER_REGISTRY_KEY) || "[]",
+    ) as Array<Record<string, unknown>>;
+    const idx = registry.findIndex((u) => (u.id as string) === userId);
+    if (idx >= 0) {
+      registry[idx].lastLogin = new Date().toISOString();
+      localStorage.setItem(USER_REGISTRY_KEY, JSON.stringify(registry));
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export default function App() {
@@ -78,13 +141,24 @@ export default function App() {
         .then(
           (profile: { name: string; email: string; role: string } | null) => {
             if (profile?.role) {
-              setUserProfile({
+              const p = {
                 name: profile.name,
                 email: profile.email,
                 role: profile.role,
-              });
+              };
+              setUserProfile(p);
+              updateLastLogin(profile.email || profile.name);
               setActivePage("dashboard");
-              setAppState("app");
+              const userId = profile.email || profile.name;
+              // Check login details setup
+              if (!hasLocalPassword() || !hasSecurityQuestion()) {
+                setAppState("login-details-setup");
+              } else if (profile.role === "admin" && is2FAEnabled(userId)) {
+                // 2FA check for admin after successful II auth
+                setAppState("2fa-verify");
+              } else {
+                setAppState("app");
+              }
               if (!sessionStartedRef.current) {
                 sessionStartedRef.current = true;
                 recordSessionStart(profile.email || profile.name, profile.role);
@@ -98,8 +172,11 @@ export default function App() {
     }
   }, [isAuthenticated, actor, isInitializing]);
 
-  const handleOnboarding = async (profile: UserProfile) => {
+  const handleOnboarding = async (
+    profile: UserProfile & { studyMode?: string },
+  ) => {
     setUserProfile(profile);
+    registerUser(profile);
     if (actor) {
       try {
         await (
@@ -116,10 +193,15 @@ export default function App() {
       }
     }
     setActivePage("dashboard");
-    setAppState("app");
     if (!sessionStartedRef.current) {
       sessionStartedRef.current = true;
       recordSessionStart(profile.email || profile.name, profile.role);
+    }
+    // Check if login details setup is needed
+    if (!hasLocalPassword() || !hasSecurityQuestion()) {
+      setAppState("login-details-setup");
+    } else {
+      setAppState("app");
     }
   };
 
@@ -148,9 +230,27 @@ export default function App() {
   if (appState === "login") return <LoginPage onLogin={login} />;
   if (appState === "onboarding")
     return <OnboardingPage onComplete={handleOnboarding} />;
+  if (appState === "login-details-setup")
+    return <LoginDetailsSetupPage onSetupComplete={() => setAppState("app")} />;
 
   const role = userProfile?.role ?? "admin";
   const userId = userProfile?.email ?? userProfile?.name ?? "user";
+
+  if (appState === "2fa-verify") {
+    return (
+      <TwoFactorVerifyPage
+        userId={userId}
+        onVerified={() => setAppState("app")}
+        onCancel={() => {
+          recordSessionEnd();
+          sessionStartedRef.current = false;
+          clear();
+          setUserProfile(null);
+          setAppState("login");
+        }}
+      />
+    );
+  }
   const userName = userProfile?.name ?? "User";
 
   const wrapInLayout = (children: React.ReactNode) => (
@@ -312,6 +412,8 @@ export default function App() {
   const renderContent = () => {
     if (role === "admin" && activePage === "login-audit-log")
       return <LoginAuditLog />;
+    if (role === "admin" && activePage === "user-management")
+      return <UserManagementPage />;
 
     switch (role) {
       case "admin":
