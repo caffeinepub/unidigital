@@ -82,6 +82,7 @@ export function ExamTaking({
       totalMarks: exam.totalMarks,
       submittedAt: new Date(),
       timeTaken,
+      attempt: 1,
     };
     submitExam(sub);
     setResult(sub);

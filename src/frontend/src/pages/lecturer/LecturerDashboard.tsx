@@ -42,14 +42,17 @@ import { MemoAcknowledgment } from "../shared/MemoAcknowledgment";
 import { StaffDirectory } from "../shared/StaffDirectory";
 import { StudentRecordsList } from "../shared/StudentRecordsList";
 import { AppraisalSelf } from "./AppraisalSelf";
+import { AttendanceAnalytics } from "./AttendanceAnalytics";
 import { BiometricAttendance } from "./BiometricAttendance";
 import { CAEntry } from "./CAEntry";
+import { CBTAnalytics } from "./CBTAnalytics";
 import { CombinationScoreSheet } from "./CombinationScoreSheet";
 import { CombinedResults } from "./CombinedResults";
 import { CourseMaterials } from "./CourseMaterials";
 import { ExamScheduleLecturer } from "./ExamScheduleLecturer";
 import { HandwritingScoreScanner } from "./HandwritingScoreScanner";
 import { LecturerAttendance } from "./LecturerAttendance";
+import { LecturerELearning } from "./LecturerELearning";
 import { LecturerTimetable } from "./LecturerTimetable";
 import { ResultApprovalLecturer } from "./ResultApprovalLecturer";
 import { ResultEntry } from "./ResultEntry";
@@ -86,7 +89,10 @@ type Page =
   | "course-catalog"
   | "announcement-view"
   | "communication-center"
-  | "certificate-courses";
+  | "certificate-courses"
+  | "elearning-lecturer"
+  | "attendance-analytics"
+  | "cbt-analytics-lecturer";
 
 interface Props {
   activePage: Page;
@@ -495,6 +501,10 @@ export function LecturerDashboard({ activePage }: Props) {
         </Card>
       </div>
     );
+
+  if (activePage === "elearning-lecturer") return <LecturerELearning />;
+  if (activePage === "attendance-analytics") return <AttendanceAnalytics />;
+  if (activePage === "cbt-analytics-lecturer") return <CBTAnalytics />;
 
   return null;
 }

@@ -100,6 +100,7 @@ import { ExamScheduleAdmin } from "./ExamScheduleAdmin";
 import { ExaminationManagement } from "./ExaminationManagement";
 import { FacultyResults } from "./FacultyResults";
 import { FeeManagement } from "./FeeManagement";
+import { FullAnalyticsDashboard } from "./FullAnalyticsDashboard";
 import { GradeConfig } from "./GradeConfig";
 import { GraduationClearance } from "./GraduationClearance";
 import { HostelAdmin } from "./HostelAdmin";
@@ -129,6 +130,7 @@ import { ScoreSheetResults } from "./ScoreSheetResults";
 import { SenateMeetingMinutes } from "./SenateMeetingMinutes";
 import { SenatePresentation } from "./SenatePresentation";
 import { StaffManagement } from "./StaffManagement";
+import { StaffWelfare } from "./StaffWelfare";
 import { StudentDisciplinaryRecords } from "./StudentDisciplinaryRecords";
 import { SystemAdmin } from "./SystemAdmin";
 import { TimetableAdmin } from "./TimetableAdmin";
@@ -223,7 +225,9 @@ type Page =
   | "id-cards"
   | "student-profiles"
   | "distance-learning-admin"
-  | "part-time-studies-admin";
+  | "part-time-studies-admin"
+  | "staff-welfare"
+  | "full-analytics";
 
 interface AdminDashboardProps {
   activePage: Page;
@@ -1487,5 +1491,7 @@ export function AdminDashboard({ activePage }: AdminDashboardProps) {
   if (activePage === "distance-learning-admin")
     return <DistanceLearningAdmin />;
   if (activePage === "part-time-studies-admin") return <PartTimeStudiesAdmin />;
+  if (activePage === "staff-welfare") return <StaffWelfare />;
+  if (activePage === "full-analytics") return <FullAnalyticsDashboard />;
   return null;
 }

@@ -37,6 +37,7 @@ import {
   MessageSquare,
   Moon,
   NotebookText,
+  PlayCircle,
   Receipt,
   RefreshCw,
   ScanLine,
@@ -434,6 +435,16 @@ const navByRole: Record<string, NavItem[]> = {
       icon: <Moon size={18} />,
       key: "part-time-studies-admin",
     },
+    {
+      label: "Staff Welfare",
+      icon: <HeartHandshake size={18} />,
+      key: "staff-welfare",
+    },
+    {
+      label: "Full Analytics",
+      icon: <Briefcase size={18} />,
+      key: "full-analytics",
+    },
   ],
   student: [
     {
@@ -607,6 +618,11 @@ const navByRole: Record<string, NavItem[]> = {
       key: "part-time-studies",
     },
     {
+      label: "E-Learning",
+      icon: <PlayCircle size={18} />,
+      key: "elearning",
+    },
+    {
       label: "My Profile",
       icon: <UserCheck size={18} />,
       key: "student-profile",
@@ -716,6 +732,21 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Certificate Courses",
       icon: <Award size={18} />,
       key: "certificate-courses",
+    },
+    {
+      label: "E-Learning",
+      icon: <PlayCircle size={18} />,
+      key: "elearning-lecturer",
+    },
+    {
+      label: "Attendance Analytics",
+      icon: <BarChart3 size={18} />,
+      key: "attendance-analytics",
+    },
+    {
+      label: "CBT Analytics",
+      icon: <TrendingUp size={18} />,
+      key: "cbt-analytics-lecturer",
     },
     {
       label: "My Profile",
@@ -832,6 +863,11 @@ const navByRole: Record<string, NavItem[]> = {
       label: "Staff Onboarding",
       icon: <UserCheck size={18} />,
       key: "staff-onboarding",
+    },
+    {
+      label: "Staff Welfare",
+      icon: <HeartHandshake size={18} />,
+      key: "staff-welfare",
     },
     {
       label: "Messages",

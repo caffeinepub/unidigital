@@ -42,6 +42,7 @@ import {
   saveLocalLeaves,
   saveLocalStaff,
 } from "../../utils/sampleData";
+import { StaffWelfare } from "../admin/StaffWelfare";
 import { CommunicationCenter } from "../shared/CommunicationCenter";
 import { MemoAcknowledgment } from "../shared/MemoAcknowledgment";
 import { StaffDirectory } from "../shared/StaffDirectory";
@@ -67,7 +68,8 @@ type Page =
   | "staff-directory"
   | "memos"
   | "staff-onboarding"
-  | "communication-center";
+  | "communication-center"
+  | "staff-welfare";
 interface Props {
   activePage: Page;
 }
@@ -828,6 +830,7 @@ export function HRDashboard({ activePage }: Props) {
   if (activePage === "memos") return <MemoAcknowledgment userRole="hr" />;
   if (activePage === "staff-onboarding") return <StaffOnboarding />;
   if (activePage === "communication-center") return <CommunicationCenter />;
+  if (activePage === "staff-welfare") return <StaffWelfare />;
 
   return null;
 }

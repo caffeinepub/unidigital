@@ -10,6 +10,7 @@ export interface SessionRecord {
   deviceInfo: string;
   browser: string;
   suspicious: boolean;
+  ipAddress?: string;
 }
 
 const STORAGE_KEY = "unidigital_login_activity";
@@ -88,6 +89,7 @@ export function recordSessionStart(userId: string, role: string): string {
     deviceInfo,
     browser,
     suspicious,
+    ipAddress: "192.168.x.x", // simulated — real IP requires server-side
   };
 
   saveSessions([...sessions, newSession]);
@@ -123,6 +125,40 @@ export function recordSessionEnd(): void {
 
   saveSessions(updated);
   sessionStorage.removeItem("unidigital_active_session");
+}
+
+/**
+ * Terminate a specific session by sessionId (remote session management).
+ */
+export function terminateSession(sessionId: string): void {
+  const sessions = getAllSessions();
+  const now = new Date().toISOString();
+
+  const updated = sessions.map((s) => {
+    if (s.sessionId === sessionId && !s.logoutTime) {
+      const loginMs = new Date(s.loginTime).getTime();
+      const logoutMs = new Date(now).getTime();
+      return {
+        ...s,
+        logoutTime: now,
+        duration: Math.round((logoutMs - loginMs) / 1000),
+      };
+    }
+    return s;
+  });
+
+  saveSessions(updated);
+}
+
+/**
+ * Get all active (not yet logged out) sessions for a user — for session manager.
+ */
+export function getActiveUserSessions(userId: string): SessionRecord[] {
+  const currentSessionId = sessionStorage.getItem("unidigital_active_session");
+  return getAllSessions().filter(
+    (s) =>
+      s.userId === userId && !s.logoutTime && s.sessionId !== currentSessionId,
+  );
 }
 
 /**
@@ -192,6 +228,7 @@ export function exportSessionsToCSV(sessions: SessionRecord[]): string {
     "Duration",
     "Device",
     "Browser",
+    "IP Address",
     "Suspicious",
   ];
   const rows = sessions.map((s) => [
@@ -203,6 +240,7 @@ export function exportSessionsToCSV(sessions: SessionRecord[]): string {
     formatDuration(s.duration),
     s.deviceInfo,
     s.browser,
+    s.ipAddress ?? "–",
     s.suspicious ? "Yes" : "No",
   ]);
   return [headers, ...rows]
@@ -247,6 +285,7 @@ export function seedDemoSessions(): void {
         deviceInfo: j % 2 === 0 ? "Desktop · Windows" : "Mobile · Android",
         browser: ["Chrome", "Firefox", "Safari"][j % 3],
         suspicious: i === 2 && j === 1,
+        ipAddress: `192.168.${i + 1}.${j + 10}`,
       });
     }
     return sessions;

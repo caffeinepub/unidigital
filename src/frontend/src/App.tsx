@@ -365,6 +365,7 @@ export default function App() {
                 | "graduation-tracker"
                 | "distance-learning"
                 | "part-time-studies"
+                | "elearning"
             }
             userEmail={userProfile?.email ?? ""}
             userName={userName}
@@ -401,6 +402,10 @@ export default function App() {
                 | "course-catalog"
                 | "announcement-view"
                 | "communication-center"
+                | "certificate-courses"
+                | "elearning-lecturer"
+                | "attendance-analytics"
+                | "cbt-analytics-lecturer"
             }
           />
         );

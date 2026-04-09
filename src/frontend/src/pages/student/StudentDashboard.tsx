@@ -53,6 +53,7 @@ import { StudentAcademicRecord } from "./StudentAcademicRecord";
 import { StudentAssignments } from "./StudentAssignments";
 import { StudentAttendance } from "./StudentAttendance";
 import { StudentComplaints } from "./StudentComplaints";
+import { StudentELearning } from "./StudentELearning";
 import { StudentFees } from "./StudentFees";
 import { StudentLibrary } from "./StudentLibrary";
 import { StudentRegistrationStatus } from "./StudentRegistrationStatus";
@@ -103,7 +104,8 @@ type Page =
   | "my-certificates"
   | "graduation-tracker"
   | "distance-learning"
-  | "part-time-studies";
+  | "part-time-studies"
+  | "elearning";
 
 interface StudentDashboardProps {
   activePage: Page;
@@ -683,5 +685,7 @@ export function StudentDashboard({
     return <DistanceLearning userEmail={userEmail} userName={userName} />;
   if (activePage === "part-time-studies")
     return <PartTimeStudies userEmail={userEmail} userName={userName} />;
+  if (activePage === "elearning")
+    return <StudentELearning userEmail={userEmail} />;
   return null;
 }

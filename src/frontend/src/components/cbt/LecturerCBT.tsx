@@ -98,6 +98,8 @@ export function LecturerCBT({ courseCodes }: { courseCodes: string[] }) {
       totalMarks: 0,
       status: "draft",
       questions: [],
+      resitEligible: true,
+      passThreshold: 50,
     };
     createExam(exam);
     setCreateDialog(false);
@@ -112,6 +114,8 @@ export function LecturerCBT({ courseCodes }: { courseCodes: string[] }) {
       options: { A: qForm.A, B: qForm.B, C: qForm.C, D: qForm.D },
       correct: qForm.correct,
       marks: qForm.marks,
+      difficulty: "medium",
+      topic: "General",
     };
     addQuestion(selectedExamId, q);
     setAddQDialog(false);
@@ -146,6 +150,8 @@ export function LecturerCBT({ courseCodes }: { courseCodes: string[] }) {
       },
       correct: editQForm.correct,
       marks: editQForm.marks,
+      difficulty: "medium",
+      topic: "General",
     };
     editQuestion(selectedExamId, editingQuestionId, updated);
     setEditQDialog(false);
